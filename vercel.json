@@ -4,5 +4,12 @@
       "source": "/api/(.*)",
       "destination": "/api/index.js"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/.well-known/farcaster.json",
+      "destination": "https://api.farcaster.xyz/miniapps/hosted-manifest/019d839c-946c-918d-ac54-e866572d878a",
+      "permanent": false
+    }
   ]
 }
