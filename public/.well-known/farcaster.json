@@ -1,0 +1,18 @@
+{
+  "miniapp": {
+    "name": "commit.base",
+    "version": "1",
+    "iconUrl": "https://commit-base.vercel.app/icon.png",
+    "homeUrl": "https://commit-base.vercel.app",
+    "imageUrl": "https://commit-base.vercel.app/image.png",
+    "splashImageUrl": "https://commit-base.vercel.app/splash.png",
+    "splashBackgroundColor": "#0000FF",
+    "webhookUrl": "https://commit-base.vercel.app/api/webhook",
+    "subtitle": "commit.base",
+    "description": "Select a habit, stake USDC. Get it back if you succeed.",
+    "primaryCategory": "art-creativity",
+    "screenshotUrls": [
+      "https://black-accepted-ant-623.mypinata.cloud/ipfs/bafkreicfxkjrnyxxw3ukjjxp5kgm2x4retnpi5x7rseiqjpe2kcrc4nhwm"
+    ]
+  }
+}
