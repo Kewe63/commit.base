@@ -150,4 +150,11 @@ app.post('/api/checkin', async (req, res) => {
   }
 });
 
+// --- Farcaster Webhook ---
+app.post('/api/webhook', (req, res) => {
+  console.log('[Farcaster Webhook] Received payload:', req.body);
+  // Farcaster genellikle webhook isteklerine 200 OK dönülmesini bekler.
+  res.status(200).json({ success: true, message: "Webhook received" });
+});
+
 export default app;
