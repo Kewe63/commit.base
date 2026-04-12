@@ -866,7 +866,7 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
             <div>
               <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: `var(--text)` }}>
-                commit<span style={{ color: "#34d399" }}>.base</span>
+                commit<span style={{ color: "#0000FF" }}>.base</span>
               </div>
               <div style={{ fontSize: 9, color: `var(--text-darker)`, letterSpacing: "0.14em", marginTop: 2 }}>
                 {t("appSubtitle")}
