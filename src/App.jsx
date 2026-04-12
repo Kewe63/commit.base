@@ -83,9 +83,7 @@ const erc20Abi = [
     "type": "function"
   }
 ];
-
-const API_URL = "http://localhost:3001/api";
-
+const API_URL = "/api";
 function InteractiveBG() {
   const { theme } = useGlobalState();
   const canvasRef = useRef(null);
