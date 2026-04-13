@@ -455,6 +455,29 @@ function ActiveTab({ comm, processingThis, onCheckin }) {
   const isComplete = checkins >= duration;
   const daysLeft = Math.max(0, duration - checkins);
 
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  useEffect(() => {
+    if (checkins === 0) return;
+    const lastTime = comm.lastCheckinDate || (comm.startDate ? new Date(comm.startDate).getTime() : 0);
+    if (!lastTime) return;
+    
+    const updateTime = () => {
+      const remaining = (lastTime + 24 * 60 * 60 * 1000) - Date.now();
+      setTimeLeft(remaining > 0 ? remaining : 0);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, [comm.lastCheckinDate, comm.startDate, checkins]);
+
+  const isWaiting = timeLeft > 0;
+  const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+  const mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+  const secs = Math.floor((timeLeft % (1000 * 60)) / 1000);
+  const countdownStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const btnDisabled = processingThis || isWaiting;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Hero ring */}
@@ -472,17 +495,17 @@ function ActiveTab({ comm, processingThis, onCheckin }) {
 
         {/* Check-in button */}
         {!isComplete && (
-          <button onClick={onCheckin} disabled={processingThis} style={{
+          <button onClick={onCheckin} disabled={btnDisabled} style={{
             width: 200, padding: "14px 0",
-            border: `1px solid ${processingThis ? "rgba(255,255,255,0.08)" : (sel?.color || "#34d399") + "80"}`,
-            borderRadius: 50, cursor: processingThis ? "not-allowed" : "pointer",
-            background: processingThis ? "rgba(255,255,255,0.03)" : `${sel?.color || "#34d399"}18`,
-            color: processingThis ? `var(--text-darker)` : sel?.color || "#34d399",
+            border: `1px solid ${btnDisabled ? "rgba(255,255,255,0.08)" : (sel?.color || "#34d399") + "80"}`,
+            borderRadius: 50, cursor: btnDisabled ? "not-allowed" : "pointer",
+            background: btnDisabled ? "rgba(255,255,255,0.03)" : `${sel?.color || "#34d399"}18`,
+            color: btnDisabled ? `var(--text-darker)` : sel?.color || "#34d399",
             fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.1em",
             transition: "all 0.25s",
             textTransform: "uppercase"
           }}>
-            {processingThis ? t("verifying") : t("checkinNow")}
+            {processingThis ? t("verifying") : isWaiting ? countdownStr : t("checkinNow")}
           </button>
         )}
 
