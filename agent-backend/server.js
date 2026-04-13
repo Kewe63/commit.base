@@ -85,11 +85,24 @@ app.post('/api/checkin', async (req, res) => {
   console.log(`[Agent] Verifying check-in for ${walletAddress} (Routine ${commitId}) with x402 payment...`);
   
   try {
-    // 1. Simulate x402 payment to the Validator Agent
+    const now = Date.now();
+    const lastTime = comm.lastCheckinDate || new Date(comm.startDate).getTime();
+    
+    // Check if 24 hours have passed since the last check-in
+    // We only enforce this if there has been at least 1 check-in (to allow initial check-in immediately or 24h after start, depending on preference. Let's enforce 24h from last checkin)
+    if (comm.checkins > 0 && (now - lastTime < 24 * 60 * 60 * 1000)) {
+      const remainingMs = (24 * 60 * 60 * 1000) - (now - lastTime);
+      const remainingHours = Math.floor(remainingMs / (1000 * 60 * 60));
+      const remainingMins = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+      return res.status(400).json({ error: `You must wait 24 hours between check-ins. Try again in ${remainingHours}h ${remainingMins}m.` });
+    }
+
+    // Simulate x402 payment to the Validator Agent
     await new Promise(resolve => setTimeout(resolve, 1500));
     console.log(`[Agent] x402 payment of $0.05 sent to Validator Agent. Validator returned: SUCCESS.`);
 
     comm.checkins += 1;
+    comm.lastCheckinDate = now;
     
     // Simulate end of duration check
     let isFinished = false;

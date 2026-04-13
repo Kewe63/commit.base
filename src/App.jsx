@@ -809,7 +809,7 @@ export default function App() {
           setTimeout(() => setConfetti(false), 5000);
         }
       } else {
-        alert("x402 AI Doğrulaması başarısız! " + data.error);
+        alert(data.error || "Doğrulama başarısız!");
       }
     } catch (err) {
       console.error(err);
