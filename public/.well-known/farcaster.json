@@ -1,0 +1,15 @@
+{
+  "accountAssociation": {
+    "header": "PASTE_HEADER_HERE",
+    "payload": "PASTE_PAYLOAD_HERE",
+    "signature": "PASTE_SIGNATURE_HERE"
+  },
+  "frame": {
+    "version": "1",
+    "name": "commit.base",
+    "iconUrl": "https://commit-base.vercel.app/favicon.png",
+    "homeUrl": "https://commit-base.vercel.app",
+    "imageUrl": "https://commit-base.vercel.app/favicon.png",
+    "buttonText": "Launch commit.base"
+  }
+}
