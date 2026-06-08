@@ -3,19 +3,20 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 
 import { WagmiProvider, createConfig, http } from 'wagmi'
-import { base } from 'wagmi/chains'
+import { base, baseSepolia } from 'wagmi/chains'
 import { injected, coinbaseWallet } from 'wagmi/connectors'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { sdk } from '@farcaster/miniapp-sdk'
 
 const config = createConfig({
-  chains: [base],
+  chains: [base, baseSepolia],
   connectors: [
     injected(),
     coinbaseWallet({ appName: 'commit.base', preference: 'smartWalletOnly' }),
   ],
   transports: {
     [base.id]: http(),
+    [baseSepolia.id]: http(),
   },
 })
 

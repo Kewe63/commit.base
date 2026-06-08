@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useChainId } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { base } from 'wagmi/chains'
+import { base, baseSepolia } from 'wagmi/chains'
 import { parseUnits } from 'viem';
 
 const TRANSLATIONS = {
@@ -69,8 +69,11 @@ const getHabits = (t) => [
 const DURATIONS = [7, 14, 21, 30, 60, 90];
 const AMOUNTS = [5, 10, 25, 50, 100];
 
-// Define USDC Contract on Base Mainnet
-const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+// Define USDC Contracts on different networks
+const USDC_ADDRESSES = {
+  [base.id]: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",      // Base Mainnet
+  [baseSepolia.id]: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Base Sepolia
+};
 const AGENT_WALLET = "0x07da137f89BB72BFE7c5ccA87bac842fb9E6F58b";
 const erc20Abi = [
   {
@@ -608,9 +611,9 @@ function ContractTab({ comm }) {
       <GlassCard hover={false} style={{ padding: 18 }}>
         <div style={{ fontSize: 10, color: `var(--text-darker)`, letterSpacing: "0.1em", marginBottom: 14 }}>{t("contractInfo")}</div>
         {[
-          [t("cAddress"), "USDC: " + USDC_ADDRESS.slice(0,6) + "..." + USDC_ADDRESS.slice(-4)],
+          [t("cAddress"), "USDC: " + USDC_ADDRESSES[selectedNetwork].slice(0,6) + "..." + USDC_ADDRESSES[selectedNetwork].slice(-4)],
           [t("agentWallet"), AGENT_WALLET.slice(0,6) + "..." + AGENT_WALLET.slice(-4)],
-          ["Network", "Base Mainnet"],
+          ["Network", networks.find(n => n.id === selectedNetwork)?.name || "Base Mainnet"],
           ["Stake", `$${amount}`],
           [t("successThresh"), "%80"],
         ].map(([k, v]) => (
@@ -715,18 +718,36 @@ export default function App() {
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChainAsync } = useSwitchChain();
+  const currentChainId = useChainId();
 
   const { writeContract, data: txHash, error: txError, isPending: isTxPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   const [screen, setScreen] = useState("setup");
   const [stagedConfig, setStagedConfig] = useState(null);
+  const [selectedNetwork, setSelectedNetwork] = useState(base.id);
   
   const [commitmentsList, setCommitmentsList] = useState([]);
   const [isProcessing, setIsProcessing] = useState(null); // 'setup' or commitId
   
   const [globalTab, setGlobalTab] = useState("active");
   const [confetti, setConfetti] = useState(false);
+
+  const networks = [
+    { id: base.id, name: "Base Mainnet", label: "🌐 Base Mainnet" },
+    { id: baseSepolia.id, name: "Base Sepolia", label: "🧪 Base Sepolia" }
+  ];
+
+  const handleNetworkSwitch = async (netId) => {
+    setSelectedNetwork(netId);
+    if (isConnected) {
+      try {
+        await switchChainAsync({ chainId: netId });
+      } catch (err) {
+        console.error("Network switch failed:", err);
+      }
+    }
+  };
 
   useEffect(() => {
     if (isConfirmed && stagedConfig) {
@@ -770,8 +791,9 @@ export default function App() {
     }
     setStagedConfig(cfg);
     const parsedAmount = parseUnits(cfg.amount.toString(), 6);
+    const currentUsdcAddress = USDC_ADDRESSES[selectedNetwork];
     writeContract({
-      address: USDC_ADDRESS,
+      address: currentUsdcAddress,
       abi: erc20Abi,
       functionName: 'transfer',
       args: [AGENT_WALLET, parsedAmount],
@@ -896,6 +918,27 @@ export default function App() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <select 
+                value={selectedNetwork}
+                onChange={(e) => handleNetworkSwitch(Number(e.target.value))}
+                style={{ 
+                  background: "transparent", 
+                  border: "1px solid var(--card-border)", 
+                  borderRadius: 8, 
+                  padding: "4px 8px", 
+                  color: "var(--text)", 
+                  cursor: "pointer", 
+                  fontSize: 11, 
+                  fontWeight: "bold",
+                  fontFamily: "'DM Mono', monospace"
+                }}
+              >
+                {networks.map(net => (
+                  <option key={net.id} value={net.id} style={{ background: "#0a0e27", color: "var(--text)" }}>
+                    {net.label}
+                  </option>
+                ))}
+              </select>
               <button onClick={toggleLang} style={{ background: "transparent", border: "1px solid var(--card-border)", borderRadius: 8, padding: "4px 8px", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>{lang === 'tr' ? '🇬🇧 EN' : '🇹🇷 TR'}</button>
               {!isConnected ? (
                 <button onClick={() => connect({ connector: injected(), chainId: base.id })} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, color: `var(--text)`, fontSize: 9, padding: "4px 10px", cursor: "pointer" }}>{t("connectBtn")}</button>
