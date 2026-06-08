@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { baseSepolia } from 'wagmi/chains';
+import { base } from 'wagmi/chains'
 import { parseUnits } from 'viem';
 
 const TRANSLATIONS = {
@@ -69,8 +69,8 @@ const getHabits = (t) => [
 const DURATIONS = [7, 14, 21, 30, 60, 90];
 const AMOUNTS = [5, 10, 25, 50, 100];
 
-// Define USDC Contract on Base Sepolia
-const USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+// Define USDC Contract on Base Mainnet
+const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const AGENT_WALLET = "0x07da137f89BB72BFE7c5ccA87bac842fb9E6F58b";
 const erc20Abi = [
   {
@@ -531,7 +531,7 @@ function ActiveTab({ comm, processingThis, onCheckin }) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 10, color: `var(--text-darker)`, letterSpacing: "0.1em", marginBottom: 3 }}>NETWORK</div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "'DM Mono', monospace" }}>Base Sepolia</div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "'DM Mono', monospace" }}>Base Mainnet</div>
         </div>
       </GlassCard>
     </div>
@@ -610,7 +610,7 @@ function ContractTab({ comm }) {
         {[
           [t("cAddress"), "USDC: " + USDC_ADDRESS.slice(0,6) + "..." + USDC_ADDRESS.slice(-4)],
           [t("agentWallet"), AGENT_WALLET.slice(0,6) + "..." + AGENT_WALLET.slice(-4)],
-          ["Network", "Base Sepolia"],
+          ["Network", "Base Mainnet"],
           ["Stake", `$${amount}`],
           [t("successThresh"), "%80"],
         ].map(([k, v]) => (
@@ -760,12 +760,12 @@ export default function App() {
 
   async function handleStart(cfg) {
     if (!isConnected) {
-      connect({ connector: injected(), chainId: baseSepolia.id });
+      connect({ connector: injected(), chainId: base.id });
       return;
     }
-    if (chainId !== baseSepolia.id) {
+    if (chainId !== base.id) {
       try {
-        await switchChainAsync({ chainId: baseSepolia.id });
+        await switchChainAsync({ chainId: base.id });
       } catch { return; }
     }
     setStagedConfig(cfg);
@@ -898,7 +898,7 @@ export default function App() {
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <button onClick={toggleLang} style={{ background: "transparent", border: "1px solid var(--card-border)", borderRadius: 8, padding: "4px 8px", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>{lang === 'tr' ? '🇬🇧 EN' : '🇹🇷 TR'}</button>
               {!isConnected ? (
-                <button onClick={() => connect({ connector: injected(), chainId: baseSepolia.id })} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, color: `var(--text)`, fontSize: 9, padding: "4px 10px", cursor: "pointer" }}>{t("connectBtn")}</button>
+                <button onClick={() => connect({ connector: injected(), chainId: base.id })} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, color: `var(--text)`, fontSize: 9, padding: "4px 10px", cursor: "pointer" }}>{t("connectBtn")}</button>
               ) : (
                 <button onClick={() => disconnect()} style={{ background: "transparent", border: "1px solid #34d39980", borderRadius: 20, color: "#34d399", fontSize: 9, padding: "4px 10px", cursor: "pointer" }}>{address.slice(0,6)}...{address.slice(-4)}</button>
               )}
