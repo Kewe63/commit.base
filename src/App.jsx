@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain, useChainId, useWriteContract, usePublicClient } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId, useWriteContract, usePublicClient } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { base, baseSepolia } from 'wagmi/chains'
 import { parseUnits, encodeFunctionData } from 'viem';
@@ -735,11 +735,10 @@ export default function App() {
   const { switchChainAsync } = useSwitchChain();
   const currentChainId = useChainId();
 
-  const { sendTransaction, data: txResponse, error: txError, isLoading: isTxPending } = useSendTransaction();
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
-  const txHash = txResponse?.hash;
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+  const [txError, setTxError] = useState(null);
+  const isTxPending = false;
 
   const [screen, setScreen] = useState("setup");
   const [stagedConfig, setStagedConfig] = useState(null);
@@ -767,12 +766,6 @@ export default function App() {
       }
     }
   };
-
-  useEffect(() => {
-    if (isConfirmed && stagedConfig) {
-      registerPledgeWithAgent(txHash, stagedConfig);
-    }
-  }, [isConfirmed]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -848,30 +841,29 @@ export default function App() {
 
     try {
       // Step 1: approve
+      console.log("Step 1: approve", { usdcAddress, vaultAddress, parsedAmount });
       const approveTxHash = await writeContractAsync({
         address: usdcAddress,
         abi: erc20Abi,
         functionName: 'approve',
         args: [vaultAddress, parsedAmount],
       });
+      console.log("Approve tx:", approveTxHash);
       await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
 
-      // Step 2: createCommitment (builder suffix append via sendTransaction)
-      const createData = encodeFunctionData({
+      // Step 2: createCommitment
+      console.log("Step 2: createCommitment", { vaultAddress, parsedAmount, duration: cfg.duration, charity: cfg.charity });
+      const createTxHash = await writeContractAsync({
+        address: vaultAddress,
         abi: CommitmentVaultABI,
         functionName: 'createCommitment',
         args: [parsedAmount, BigInt(cfg.duration), cfg.charity, BigInt(80)],
       });
-      const createTxData = BUILDER_CODE_SUFFIX_HEX
-        ? `${createData}${BUILDER_CODE_SUFFIX_HEX.replace(/^0x/, "")}`
-        : createData;
-
-      sendTransaction({
-        to: vaultAddress,
-        data: createTxData,
-      });
+      console.log("CreateCommitment tx:", createTxHash);
+      await registerPledgeWithAgent(createTxHash, cfg);
     } catch (err) {
       console.error("handleStart error:", err);
+      setTxError(err);
       setStagedConfig(null);
     }
   }
@@ -1006,13 +998,11 @@ export default function App() {
     { id: "contract", icon: <i className="bx bx-receipt"></i>, label: t("tabContract") },
   ];
 
-  const setupBtnText = isTxPending ? t("waitingWallet") 
-                     : isConfirming ? t("verifyingBase") 
-                     : isProcessing === "setup" ? t("agentSaving") 
-                     : !isConnected ? t("connectWallet") 
-                    : t("signStake");
-                     
-  const isSetupDisabled = isTxPending || isConfirming || isProcessing === "setup" || (!isConnected && false); // wagmi handles non-connected logic directly
+  const setupBtnText = isProcessing === "setup" ? t("agentSaving")
+                     : !isConnected ? t("connectWallet")
+                     : t("signStake");
+
+  const isSetupDisabled = isProcessing === "setup";
 
   return (
     <div data-theme={theme} style={{ minHeight: "100vh", position: "relative" }}>
