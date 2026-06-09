@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+import ErrorBoundary from './ErrorBoundary.jsx'
 
 import { WagmiProvider, createConfig, http } from 'wagmi'
 import { base, baseSepolia } from 'wagmi/chains'
@@ -28,10 +29,12 @@ function Root() {
     sdk.actions.ready()
   }, [])
 
-  return (
+    return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
       </QueryClientProvider>
     </WagmiProvider>
   )

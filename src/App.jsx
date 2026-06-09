@@ -610,18 +610,22 @@ function ContractTab({ comm }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <GlassCard hover={false} style={{ padding: 18 }}>
         <div style={{ fontSize: 10, color: `var(--text-darker)`, letterSpacing: "0.1em", marginBottom: 14 }}>{t("contractInfo")}</div>
-        {[
-          [t("cAddress"), "USDC: " + USDC_ADDRESSES[selectedNetwork].slice(0,6) + "..." + USDC_ADDRESSES[selectedNetwork].slice(-4)],
-          [t("agentWallet"), AGENT_WALLET.slice(0,6) + "..." + AGENT_WALLET.slice(-4)],
-          ["Network", networks.find(n => n.id === selectedNetwork)?.name || "Base Mainnet"],
-          ["Stake", `$${amount}`],
-          [t("successThresh"), "%80"],
-        ].map(([k, v]) => (
-          <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-            <span style={{ fontSize: 11, color: `var(--text-dark)` }}>{k}</span>
-            <span style={{ fontSize: 11, color: `var(--text-muted)`, fontFamily: "'DM Mono', monospace" }}>{v}</span>
-          </div>
-        ))}
+        {(() => {
+          const usdcAddr = USDC_ADDRESSES[selectedNetwork] || "0x0";
+          const usdcLabel = usdcAddr && usdcAddr.length > 10 ? `USDC: ${usdcAddr.slice(0,6)}...${usdcAddr.slice(-4)}` : `USDC: ${usdcAddr}`;
+          return [
+            [t("cAddress"), usdcLabel],
+            [t("agentWallet"), AGENT_WALLET.slice(0,6) + "..." + AGENT_WALLET.slice(-4)],
+            ["Network", networks.find(n => n.id === selectedNetwork)?.name || "Base Mainnet"],
+            ["Stake", `$${amount}`],
+            [t("successThresh"), "%80"],
+          ].map(([k, v]) => (
+            <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <span style={{ fontSize: 11, color: `var(--text-dark)` }}>{k}</span>
+              <span style={{ fontSize: 11, color: `var(--text-muted)`, fontFamily: "'DM Mono', monospace" }}>{v}</span>
+            </div>
+          ));
+        })()}
       </GlassCard>
 
       {/* Progress bar */}
