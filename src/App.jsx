@@ -871,15 +871,20 @@ export default function App() {
   async function registerPledgeWithAgent(hash, cfg) {
     setIsProcessing("setup");
     try {
-      // tx receipt'ten CommitmentCreated event'indeki id'yi oku
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
       const vaultAddress = VAULT_ADDRESSES[selectedNetwork];
 
-      // CommitmentCreated event: topics[1] = id (indexed)
-      const createdLog = receipt.logs.find(
+      // receipt zaten confirmed, direkt kullan
+      const receipt = await publicClient.getTransactionReceipt({ hash });
+
+      // CommitmentCreated event: topics[1] = id (indexed uint256)
+      const createdLog = receipt?.logs?.find(
         l => l.address?.toLowerCase() === vaultAddress?.toLowerCase()
       );
-      const commitmentId = createdLog ? BigInt(createdLog.topics[1]).toString() : Date.now().toString();
+      const commitmentId = createdLog?.topics?.[1]
+        ? BigInt(createdLog.topics[1]).toString()
+        : Date.now().toString();
+
+      console.log("commitmentId parsed:", commitmentId);
 
       const newCommitment = {
         id: commitmentId,
@@ -891,7 +896,7 @@ export default function App() {
         charity: cfg.charity,
         txHash: hash,
         checkins: 0,
-        startDate: new Date(),
+        startDate: new Date().toISOString(),
       };
 
       // localStorage'a kaydet
@@ -900,29 +905,11 @@ export default function App() {
       list.push(newCommitment);
       localStorage.setItem(`commitments_${address}`, JSON.stringify(list));
 
-      // opsiyonel: backend'e de kaydet
-      try {
-        await fetch(`${API_URL}/stake`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            walletAddress: address,
-            amount: cfg.amount,
-            habitId: cfg.habit,
-            customHabit: cfg.isCustomHabit ? { label: cfg.customHabitLabel, sub: cfg.customHabitSub } : null,
-            duration: cfg.duration,
-            charity: cfg.charity,
-            txHash: hash,
-            onchainId: commitmentId,
-          })
-        });
-      } catch (_) { /* backend opsiyonel */ }
-
       setStagedConfig(null);
       setCommitmentsList(list.slice().reverse());
       setScreen("dashboard");
     } catch (err) {
-      console.error(err);
+      console.error("registerPledgeWithAgent error:", err);
     }
     setIsProcessing(null);
   }
