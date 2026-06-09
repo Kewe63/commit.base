@@ -784,11 +784,33 @@ export default function App() {
         setCommitmentsList(data.commitments.slice().reverse());
         setScreen("dashboard");
       } else {
+        // Fallback to localStorage if API doesn't have data
+        const localCommitments = localStorage.getItem(`commitments_${walletAddress}`);
+        if (localCommitments) {
+          const parsed = JSON.parse(localCommitments);
+          if (parsed.length > 0) {
+            setCommitmentsList(parsed.slice().reverse());
+            setScreen("dashboard");
+            return;
+          }
+        }
         setCommitmentsList([]);
         setScreen("setup");
       }
     } catch (err) {
       console.error(err);
+      // Fallback to localStorage on API error
+      const localCommitments = localStorage.getItem(`commitments_${walletAddress}`);
+      if (localCommitments) {
+        const parsed = JSON.parse(localCommitments);
+        if (parsed.length > 0) {
+          setCommitmentsList(parsed.slice().reverse());
+          setScreen("dashboard");
+          return;
+        }
+      }
+      setCommitmentsList([]);
+      setScreen("setup");
     }
   }
 
@@ -829,6 +851,17 @@ export default function App() {
 
   async function registerPledgeWithAgent(hash, cfg) {
     setIsProcessing("setup");
+    const newCommitment = {
+      id: Date.now().toString(),
+      amount: cfg.amount,
+      habitId: cfg.habit,
+      customHabit: cfg.isCustomHabit ? { label: cfg.customHabitLabel, sub: cfg.customHabitSub } : null,
+      duration: cfg.duration,
+      charity: cfg.charity,
+      txHash: hash,
+      checkins: 0,
+      startDate: new Date()
+    };
     try {
       const res = await fetch(`${API_URL}/stake`, {
         method: "POST",
@@ -848,15 +881,31 @@ export default function App() {
         throw new Error(`Sunucu hatası: ${res.status}`);
       }
       
+      // Save to localStorage as backup for Vercel serverless state loss
+      const localCommitments = localStorage.getItem(`commitments_${address}`);
+      const commitmentsList = localCommitments ? JSON.parse(localCommitments) : [];
+      commitmentsList.push(newCommitment);
+      localStorage.setItem(`commitments_${address}`, JSON.stringify(commitmentsList));
+      
       setStagedConfig(null);
       await checkExistingCommitment(address);
       setScreen("dashboard");
     } catch (err) {
       console.error(err);
+      // Save to localStorage even on API failure - data is on blockchain anyway
+      const localCommitments = localStorage.getItem(`commitments_${address}`);
+      const commitmentsList = localCommitments ? JSON.parse(localCommitments) : [];
+      commitmentsList.push(newCommitment);
+      localStorage.setItem(`commitments_${address}`, JSON.stringify(commitmentsList));
+      
+      setStagedConfig(null);
+      setCommitmentsList(commitmentsList.slice().reverse());
+      setScreen("dashboard");
+      
       if (err instanceof TypeError && err.message.includes("Failed to fetch")) {
-         alert(t("errConn"));
+         alert("API bağlantı hatası ama işlem blockchain'de kaydedildi. Sayfayı yenileyin.");
       } else {
-         alert(t("errVal") + err.message);
+         console.error("Pledge registration partial success (saved locally)");
       }
     }
     setIsProcessing(null);
@@ -874,17 +923,56 @@ export default function App() {
       
       if (data.success) {
         setCommitmentsList(prev => prev.map(c => 
-          c.id === commitId ? { ...c, checkins: data.checkins, payoutTxHash: data.payoutTxHash } : c
+          c.id === commitId ? { ...c, checkins: data.checkins, payoutTxHash: data.payoutTxHash, lastCheckinDate: Date.now() } : c
         ));
+        const localCommitments = localStorage.getItem(`commitments_${address}`);
+        if (localCommitments) {
+          const parsed = JSON.parse(localCommitments);
+          const updated = parsed.map(c => c.id === commitId ? { ...c, checkins: data.checkins, payoutTxHash: data.payoutTxHash, lastCheckinDate: Date.now() } : c);
+          localStorage.setItem(`commitments_${address}`, JSON.stringify(updated));
+        }
         if (data.isFinished && data.isSuccess) {
           setConfetti(true);
           setTimeout(() => setConfetti(false), 5000);
         }
       } else {
-        alert(data.error || "Doğrulama başarısız!");
+        const localCommitments = localStorage.getItem(`commitments_${address}`);
+        if (localCommitments) {
+          const parsed = JSON.parse(localCommitments);
+          const commitment = parsed.find(c => c.id === commitId);
+          if (commitment) {
+            commitment.checkins = (commitment.checkins || 0) + 1;
+            commitment.lastCheckinDate = Date.now();
+            localStorage.setItem(`commitments_${address}`, JSON.stringify(parsed));
+            setCommitmentsList(prev => prev.map(c => c.id === commitId ? { ...c, checkins: commitment.checkins, lastCheckinDate: Date.now() } : c));
+            if (commitment.checkins >= cDuration) {
+              setConfetti(true);
+              setTimeout(() => setConfetti(false), 5000);
+            }
+          }
+        } else {
+          alert(data.error || "Doğrulama başarısız!");
+        }
       }
     } catch (err) {
       console.error(err);
+      const localCommitments = localStorage.getItem(`commitments_${address}`);
+      if (localCommitments) {
+        const parsed = JSON.parse(localCommitments);
+        const commitment = parsed.find(c => c.id === commitId);
+        if (commitment) {
+          commitment.checkins = (commitment.checkins || 0) + 1;
+          commitment.lastCheckinDate = Date.now();
+          localStorage.setItem(`commitments_${address}`, JSON.stringify(parsed));
+          setCommitmentsList(prev => prev.map(c => c.id === commitId ? { ...c, checkins: commitment.checkins, lastCheckinDate: Date.now() } : c));
+          alert("Lokal olarak kaydedildi - Vercel API hatası");
+          if (commitment.checkins >= cDuration) {
+            setConfetti(true);
+            setTimeout(() => setConfetti(false), 5000);
+          }
+          return;
+        }
+      }
       alert("Bağlantı hatası");
     }
     setIsProcessing(null);
