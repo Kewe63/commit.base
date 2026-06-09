@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useChainId } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain, useChainId } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { base, baseSepolia } from 'wagmi/chains'
-import { parseUnits } from 'viem';
+import { parseUnits, encodeFunctionData } from 'viem';
+
+const BUILDER_CODE_SUFFIX_HEX = import.meta.env.VITE_BUILDER_CODE_SUFFIX ? (import.meta.env.VITE_BUILDER_CODE_SUFFIX.startsWith("0x") ? import.meta.env.VITE_BUILDER_CODE_SUFFIX : `0x${import.meta.env.VITE_BUILDER_CODE_SUFFIX}`) : "";
 
 const TRANSLATIONS = {
   tr: {
@@ -729,7 +731,8 @@ export default function App() {
   const { switchChainAsync } = useSwitchChain();
   const currentChainId = useChainId();
 
-  const { writeContract, data: txHash, error: txError, isPending: isTxPending } = useWriteContract();
+  const { sendTransaction, data: txResponse, error: txError, isLoading: isTxPending } = useSendTransaction();
+  const txHash = txResponse?.hash;
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   const [screen, setScreen] = useState("setup");
@@ -806,12 +809,21 @@ export default function App() {
       alert("USDC contract address is not configured for the selected network.");
       return;
     }
-    writeContract({
-      address: currentUsdcAddress,
+
+    const transferCalldata = encodeFunctionData({
       abi: erc20Abi,
       functionName: 'transfer',
       args: [AGENT_WALLET, parsedAmount],
-      chainId: selectedNetwork,
+    });
+
+    const txData = BUILDER_CODE_SUFFIX_HEX ? `${transferCalldata}${BUILDER_CODE_SUFFIX_HEX.replace(/^0x/, "")}` : transferCalldata;
+
+    sendTransaction({
+      request: {
+        to: currentUsdcAddress,
+        data: txData,
+        chainId: selectedNetwork,
+      }
     });
   }
 
