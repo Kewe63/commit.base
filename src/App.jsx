@@ -375,7 +375,7 @@ function SetupFlow({ onStart, btnText, isTxDisabled }) {
 
           <div style={{ marginTop: 8, marginBottom: 16 }}>
              <div style={{ fontSize: 10, color: `var(--text-dark)`, letterSpacing: "0.12em", marginBottom: 8 }}>{t("customAmount")}</div>
-             <input type="number" min="1" value={amount} onChange={(e) => setAmount(parseInt(e.target.value) || "")} style={{ width: "100%", padding: "12px", background: `var(--card-bg)`, border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: `var(--text)`, fontFamily: "'DM Mono', monospace", fontSize: 12, outline: "none" }} />
+             <input type="number" min="0.0001" step="0.0001" value={amount} onChange={(e) => setAmount(e.target.value === "" ? "" : parseFloat(e.target.value))} style={{ width: "100%", padding: "12px", background: `var(--card-bg)`, border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: `var(--text)`, fontFamily: "'DM Mono', monospace", fontSize: 12, outline: "none" }} />
           </div>
 
           <div style={{ fontSize: 10, color: `var(--text-dark)`, letterSpacing: "0.12em", marginBottom: 14 }}>{t("penaltyTitle")}</div>
@@ -404,7 +404,7 @@ function SetupFlow({ onStart, btnText, isTxDisabled }) {
           </GlassCard>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => setStep(1)} style={{ padding: "12px 20px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, background: "transparent", color: `var(--text-dark)`, cursor: "pointer", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>← geri</button>
-            <button onClick={() => setStep(3)} disabled={!charity || !amount || amount < 1} style={{ flex: 1, padding: "12px", border: "none", borderRadius: 10, background: charity && amount > 0 ? "#a78bfa" : `var(--line-strong)`, color: charity && amount > 0 ? "#06060e" : `var(--text-dark)`, fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.08em", cursor: charity && amount > 0 ? "pointer" : "not-allowed", transition: "all 0.2s" }}>devam et →</button>
+            <button onClick={() => setStep(3)} disabled={!charity || !amount || Number(amount) <= 0} style={{ flex: 1, padding: "12px", border: "none", borderRadius: 10, background: charity && amount > 0 ? "#a78bfa" : `var(--line-strong)`, color: charity && amount > 0 ? "#06060e" : `var(--text-dark)`, fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.08em", cursor: charity && amount > 0 ? "pointer" : "not-allowed", transition: "all 0.2s" }}>devam et →</button>
           </div>
         </div>
       )}
