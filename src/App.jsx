@@ -868,11 +868,9 @@ export default function App() {
         : createData;
 
       sendTransaction({
-        request: {
-          to: vaultAddress,
-          data: createTxData,
-          chainId: selectedNetwork,
-        }
+        to: vaultAddress,
+        data: createTxData,
+        chainId: selectedNetwork,
       });
     } catch (err) {
       console.error("handleStart error:", err);
