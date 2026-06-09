@@ -833,7 +833,8 @@ export default function App() {
 
     const vaultAddress = VAULT_ADDRESSES[selectedNetwork];
     if (!vaultAddress) {
-      alert("Kontrat bu ağda henüz deploy edilmedi.");
+      // Mainnet'te kontrat yok, otomatik Sepolia'ya geç
+      await handleNetworkSwitch(baseSepolia.id);
       return;
     }
     const usdcAddress = USDC_ADDRESSES[selectedNetwork];
