@@ -846,27 +846,17 @@ export default function App() {
     const parsedAmount = parseUnits(cfg.amount.toString(), 6);
 
     try {
-      // Step 1: approve
-      const approveTxData = encodeFunctionData({
-        abi: erc20Abi,
-        functionName: 'approve',
-        args: [vaultAddress, parsedAmount],
-      });
-      const approveData = BUILDER_CODE_SUFFIX_HEX
-        ? `${approveTxData}${BUILDER_CODE_SUFFIX_HEX.replace(/^0x/, "")}`
-        : approveTxData;
-
+      // Step 1: approve (builder suffix olmadan — standart ERC20 approve)
       const approveTxHash = await writeContractAsync({
         address: usdcAddress,
         abi: erc20Abi,
         functionName: 'approve',
         args: [vaultAddress, parsedAmount],
-        data: approveData,
         chainId: selectedNetwork,
       });
       await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
 
-      // Step 2: createCommitment
+      // Step 2: createCommitment — builder suffix varsa sendTransaction ile ekle
       const createData = encodeFunctionData({
         abi: CommitmentVaultABI,
         functionName: 'createCommitment',
