@@ -86,7 +86,7 @@ const erc20Abi = [
     "type": "function"
   }
 ];
-const API_URL = "/api";
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 function InteractiveBG() {
   const { theme } = useGlobalState();
   const canvasRef = useRef(null);
@@ -781,12 +781,12 @@ export default function App() {
 
   async function handleStart(cfg) {
     if (!isConnected) {
-      connect({ connector: injected(), chainId: base.id });
+      connect({ connector: injected(), chainId: selectedNetwork });
       return;
     }
-    if (chainId !== base.id) {
+    if (chainId !== selectedNetwork) {
       try {
-        await switchChainAsync({ chainId: base.id });
+        await switchChainAsync({ chainId: selectedNetwork });
       } catch { return; }
     }
     setStagedConfig(cfg);
@@ -941,7 +941,7 @@ export default function App() {
               </select>
               <button onClick={toggleLang} style={{ background: "transparent", border: "1px solid var(--card-border)", borderRadius: 8, padding: "4px 8px", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>{lang === 'tr' ? '🇬🇧 EN' : '🇹🇷 TR'}</button>
               {!isConnected ? (
-                <button onClick={() => connect({ connector: injected(), chainId: base.id })} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, color: `var(--text)`, fontSize: 9, padding: "4px 10px", cursor: "pointer" }}>{t("connectBtn")}</button>
+                <button onClick={() => connect({ connector: injected(), chainId: selectedNetwork })} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, color: `var(--text)`, fontSize: 9, padding: "4px 10px", cursor: "pointer" }}>{t("connectBtn")}</button>
               ) : (
                 <button onClick={() => disconnect()} style={{ background: "transparent", border: "1px solid #34d39980", borderRadius: 20, color: "#34d399", fontSize: 9, padding: "4px 10px", cursor: "pointer" }}>{address.slice(0,6)}...{address.slice(-4)}</button>
               )}

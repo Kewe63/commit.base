@@ -34,6 +34,9 @@ node server.js
 ```
 The backend server will run on `http://localhost:3001` representing the x402 AI agent.
 
+> Note: For deployment, use environment variables instead of committing `agent-backend/.env`.
+> If frontend and backend are on different hosts, set `VITE_API_URL` to your backend URL in the frontend deployment.
+
 ### 3. Run the Frontend App
 Open a new terminal session, navigate to the project root, install dependencies, and start the Vite dev server.
 ```bash
