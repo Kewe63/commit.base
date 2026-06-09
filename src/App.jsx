@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain, useChainId } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain, useChainId, useWriteContract, usePublicClient } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { base, baseSepolia } from 'wagmi/chains'
 import { parseUnits, encodeFunctionData } from 'viem';
+import CommitmentVaultABI from './abi/CommitmentVault.json';
 
 const BUILDER_CODE_SUFFIX_HEX = import.meta.env.VITE_BUILDER_CODE_SUFFIX ? (import.meta.env.VITE_BUILDER_CODE_SUFFIX.startsWith("0x") ? import.meta.env.VITE_BUILDER_CODE_SUFFIX : `0x${import.meta.env.VITE_BUILDER_CODE_SUFFIX}`) : "";
 
@@ -76,14 +77,15 @@ const USDC_ADDRESSES = {
   [base.id]: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",      // Base Mainnet
   [baseSepolia.id]: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Base Sepolia
 };
-const AGENT_WALLET = "0x07da137f89BB72BFE7c5ccA87bac842fb9E6F58b";
+const VAULT_ADDRESSES = {
+  [baseSepolia.id]: "0x5bf1Db1C1b238C2E3B769AdBd4b9370e5D3BAF84", // Base Sepolia
+  [base.id]: "",  // Base Mainnet — deploy sonrası eklenecek
+};
 const erc20Abi = [
   {
-    "constant": false,
-    "inputs": [{ "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" }],
-    "name": "transfer",
+    "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }],
+    "name": "approve",
     "outputs": [{ "name": "", "type": "bool" }],
-    "payable": false,
     "stateMutability": "nonpayable",
     "type": "function"
   }
@@ -615,9 +617,11 @@ function ContractTab({ comm, selectedNetwork, networks, onOpenHistory }) {
         {(() => {
           const usdcAddr = USDC_ADDRESSES[selectedNetwork] || "0x0";
           const usdcLabel = usdcAddr && usdcAddr.length > 10 ? `USDC: ${usdcAddr.slice(0,6)}...${usdcAddr.slice(-4)}` : `USDC: ${usdcAddr}`;
+          const vaultAddr = VAULT_ADDRESSES[selectedNetwork] || "—";
+          const vaultLabel = vaultAddr.length > 10 ? `${vaultAddr.slice(0,6)}...${vaultAddr.slice(-4)}` : vaultAddr;
           return [
-            [t("cAddress"), usdcLabel],
-            [t("agentWallet"), AGENT_WALLET.slice(0,6) + "..." + AGENT_WALLET.slice(-4)],
+            [t("cAddress"), vaultLabel],
+            ["USDC", usdcLabel],
             ["Network", networks.find(n => n.id === selectedNetwork)?.name || "Base Mainnet"],
             ["Stake", `$${amount}`],
             [t("successThresh"), "%80"],
@@ -732,6 +736,8 @@ export default function App() {
   const currentChainId = useChainId();
 
   const { sendTransaction, data: txResponse, error: txError, isLoading: isTxPending } = useSendTransaction();
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
   const txHash = txResponse?.hash;
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
@@ -824,156 +830,176 @@ export default function App() {
         await switchChainAsync({ chainId: selectedNetwork });
       } catch { return; }
     }
-    setStagedConfig(cfg);
-    const parsedAmount = parseUnits(cfg.amount.toString(), 6);
-    const currentUsdcAddress = USDC_ADDRESSES[selectedNetwork];
-    if (!currentUsdcAddress) {
-      alert("USDC contract address is not configured for the selected network.");
+
+    const vaultAddress = VAULT_ADDRESSES[selectedNetwork];
+    if (!vaultAddress) {
+      alert("Kontrat bu ağda henüz deploy edilmedi.");
+      return;
+    }
+    const usdcAddress = USDC_ADDRESSES[selectedNetwork];
+    if (!usdcAddress) {
+      alert("USDC adresi bu ağ için tanımlı değil.");
       return;
     }
 
-    const transferCalldata = encodeFunctionData({
-      abi: erc20Abi,
-      functionName: 'transfer',
-      args: [AGENT_WALLET, parsedAmount],
-    });
+    setStagedConfig(cfg);
+    const parsedAmount = parseUnits(cfg.amount.toString(), 6);
 
-    const txData = BUILDER_CODE_SUFFIX_HEX ? `${transferCalldata}${BUILDER_CODE_SUFFIX_HEX.replace(/^0x/, "")}` : transferCalldata;
+    try {
+      // Step 1: approve
+      const approveTxData = encodeFunctionData({
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [vaultAddress, parsedAmount],
+      });
+      const approveData = BUILDER_CODE_SUFFIX_HEX
+        ? `${approveTxData}${BUILDER_CODE_SUFFIX_HEX.replace(/^0x/, "")}`
+        : approveTxData;
 
-    sendTransaction({
-      request: {
-        to: currentUsdcAddress,
-        data: txData,
+      const approveTxHash = await writeContractAsync({
+        address: usdcAddress,
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [vaultAddress, parsedAmount],
+        data: approveData,
         chainId: selectedNetwork,
-      }
-    });
+      });
+      await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
+
+      // Step 2: createCommitment
+      const createData = encodeFunctionData({
+        abi: CommitmentVaultABI,
+        functionName: 'createCommitment',
+        args: [parsedAmount, BigInt(cfg.duration), cfg.charity, BigInt(80)],
+      });
+      const createTxData = BUILDER_CODE_SUFFIX_HEX
+        ? `${createData}${BUILDER_CODE_SUFFIX_HEX.replace(/^0x/, "")}`
+        : createData;
+
+      sendTransaction({
+        request: {
+          to: vaultAddress,
+          data: createTxData,
+          chainId: selectedNetwork,
+        }
+      });
+    } catch (err) {
+      console.error("handleStart error:", err);
+      setStagedConfig(null);
+    }
   }
 
   async function registerPledgeWithAgent(hash, cfg) {
     setIsProcessing("setup");
-    const newCommitment = {
-      id: Date.now().toString(),
-      amount: cfg.amount,
-      habitId: cfg.habit,
-      customHabit: cfg.isCustomHabit ? { label: cfg.customHabitLabel, sub: cfg.customHabitSub } : null,
-      duration: cfg.duration,
-      charity: cfg.charity,
-      txHash: hash,
-      checkins: 0,
-      startDate: new Date()
-    };
     try {
-      const res = await fetch(`${API_URL}/stake`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          walletAddress: address,
-          amount: cfg.amount,
-          habitId: cfg.habit,
-          customHabit: cfg.isCustomHabit ? { label: cfg.customHabitLabel, sub: cfg.customHabitSub } : null,
-          duration: cfg.duration,
-          charity: cfg.charity,
-          txHash: hash
-        })
-      });
-      
-      if (!res.ok) {
-        throw new Error(`Sunucu hatası: ${res.status}`);
-      }
-      
-      // Save to localStorage as backup for Vercel serverless state loss
-      const localCommitments = localStorage.getItem(`commitments_${address}`);
-      const commitmentsList = localCommitments ? JSON.parse(localCommitments) : [];
-      commitmentsList.push(newCommitment);
-      localStorage.setItem(`commitments_${address}`, JSON.stringify(commitmentsList));
-      
+      // tx receipt'ten CommitmentCreated event'indeki id'yi oku
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const vaultAddress = VAULT_ADDRESSES[selectedNetwork];
+
+      // CommitmentCreated event: topics[1] = id (indexed)
+      const createdLog = receipt.logs.find(
+        l => l.address?.toLowerCase() === vaultAddress?.toLowerCase()
+      );
+      const commitmentId = createdLog ? BigInt(createdLog.topics[1]).toString() : Date.now().toString();
+
+      const newCommitment = {
+        id: commitmentId,
+        onchainId: commitmentId,
+        amount: cfg.amount,
+        habitId: cfg.habit,
+        customHabit: cfg.isCustomHabit ? { label: cfg.customHabitLabel, sub: cfg.customHabitSub } : null,
+        duration: cfg.duration,
+        charity: cfg.charity,
+        txHash: hash,
+        checkins: 0,
+        startDate: new Date(),
+      };
+
+      // localStorage'a kaydet
+      const local = localStorage.getItem(`commitments_${address}`);
+      const list = local ? JSON.parse(local) : [];
+      list.push(newCommitment);
+      localStorage.setItem(`commitments_${address}`, JSON.stringify(list));
+
+      // opsiyonel: backend'e de kaydet
+      try {
+        await fetch(`${API_URL}/stake`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            walletAddress: address,
+            amount: cfg.amount,
+            habitId: cfg.habit,
+            customHabit: cfg.isCustomHabit ? { label: cfg.customHabitLabel, sub: cfg.customHabitSub } : null,
+            duration: cfg.duration,
+            charity: cfg.charity,
+            txHash: hash,
+            onchainId: commitmentId,
+          })
+        });
+      } catch (_) { /* backend opsiyonel */ }
+
       setStagedConfig(null);
-      await checkExistingCommitment(address);
+      setCommitmentsList(list.slice().reverse());
       setScreen("dashboard");
     } catch (err) {
       console.error(err);
-      // Save to localStorage even on API failure - data is on blockchain anyway
-      const localCommitments = localStorage.getItem(`commitments_${address}`);
-      const commitmentsList = localCommitments ? JSON.parse(localCommitments) : [];
-      commitmentsList.push(newCommitment);
-      localStorage.setItem(`commitments_${address}`, JSON.stringify(commitmentsList));
-      
-      setStagedConfig(null);
-      setCommitmentsList(commitmentsList.slice().reverse());
-      setScreen("dashboard");
-      
-      if (err instanceof TypeError && err.message.includes("Failed to fetch")) {
-         alert("API bağlantı hatası ama işlem blockchain'de kaydedildi. Sayfayı yenileyin.");
-      } else {
-         console.error("Pledge registration partial success (saved locally)");
-      }
     }
     setIsProcessing(null);
   }
 
   async function handleCheckin(commitId, cDuration) {
     setIsProcessing(commitId);
+    const vaultAddress = VAULT_ADDRESSES[selectedNetwork];
+    if (!vaultAddress) {
+      alert("Kontrat bu ağda tanımlı değil.");
+      setIsProcessing(null);
+      return;
+    }
+
+    // onchainId varsa onu kullan, yoksa commitId'yi dene
+    const local = localStorage.getItem(`commitments_${address}`);
+    const list = local ? JSON.parse(local) : [];
+    const commitment = list.find(c => c.id === commitId);
+    const onchainId = commitment?.onchainId ?? commitId;
+
     try {
-      const res = await fetch(`${API_URL}/checkin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: address, commitId })
+      const hash = await writeContractAsync({
+        address: vaultAddress,
+        abi: CommitmentVaultABI,
+        functionName: 'checkin',
+        args: [BigInt(onchainId)],
+        chainId: selectedNetwork,
       });
-      const data = await res.json();
-      
-      if (data.success) {
-        setCommitmentsList(prev => prev.map(c => 
-          c.id === commitId ? { ...c, checkins: data.checkins, payoutTxHash: data.payoutTxHash, lastCheckinDate: Date.now() } : c
-        ));
-        const localCommitments = localStorage.getItem(`commitments_${address}`);
-        if (localCommitments) {
-          const parsed = JSON.parse(localCommitments);
-          const updated = parsed.map(c => c.id === commitId ? { ...c, checkins: data.checkins, payoutTxHash: data.payoutTxHash, lastCheckinDate: Date.now() } : c);
-          localStorage.setItem(`commitments_${address}`, JSON.stringify(updated));
-        }
-        if (data.isFinished && data.isSuccess) {
-          setConfetti(true);
-          setTimeout(() => setConfetti(false), 5000);
-        }
-      } else {
-        const localCommitments = localStorage.getItem(`commitments_${address}`);
-        if (localCommitments) {
-          const parsed = JSON.parse(localCommitments);
-          const commitment = parsed.find(c => c.id === commitId);
-          if (commitment) {
-            commitment.checkins = (commitment.checkins || 0) + 1;
-            commitment.lastCheckinDate = Date.now();
-            localStorage.setItem(`commitments_${address}`, JSON.stringify(parsed));
-            setCommitmentsList(prev => prev.map(c => c.id === commitId ? { ...c, checkins: commitment.checkins, lastCheckinDate: Date.now() } : c));
-            if (commitment.checkins >= cDuration) {
-              setConfetti(true);
-              setTimeout(() => setConfetti(false), 5000);
-            }
-          }
-        } else {
-          alert(data.error || "Doğrulama başarısız!");
-        }
+      await publicClient.waitForTransactionReceipt({ hash });
+
+      // Onchain'den güncel checkin sayısını oku
+      const onchainData = await publicClient.readContract({
+        address: vaultAddress,
+        abi: CommitmentVaultABI,
+        functionName: 'getCommitment',
+        args: [BigInt(onchainId)],
+      });
+      const newCheckins = Number(onchainData.checkins);
+      const now = Date.now();
+
+      setCommitmentsList(prev => prev.map(c =>
+        c.id === commitId ? { ...c, checkins: newCheckins, lastCheckinDate: now } : c
+      ));
+
+      // localStorage güncelle
+      const updated = list.map(c =>
+        c.id === commitId ? { ...c, checkins: newCheckins, lastCheckinDate: now } : c
+      );
+      localStorage.setItem(`commitments_${address}`, JSON.stringify(updated));
+
+      if (newCheckins >= cDuration) {
+        setConfetti(true);
+        setTimeout(() => setConfetti(false), 5000);
       }
     } catch (err) {
-      console.error(err);
-      const localCommitments = localStorage.getItem(`commitments_${address}`);
-      if (localCommitments) {
-        const parsed = JSON.parse(localCommitments);
-        const commitment = parsed.find(c => c.id === commitId);
-        if (commitment) {
-          commitment.checkins = (commitment.checkins || 0) + 1;
-          commitment.lastCheckinDate = Date.now();
-          localStorage.setItem(`commitments_${address}`, JSON.stringify(parsed));
-          setCommitmentsList(prev => prev.map(c => c.id === commitId ? { ...c, checkins: commitment.checkins, lastCheckinDate: Date.now() } : c));
-          alert("Lokal olarak kaydedildi - Vercel API hatası");
-          if (commitment.checkins >= cDuration) {
-            setConfetti(true);
-            setTimeout(() => setConfetti(false), 5000);
-          }
-          return;
-        }
-      }
-      alert("Bağlantı hatası");
+      console.error("Checkin error:", err);
+      alert(err.shortMessage || err.message || "Check-in başarısız.");
     }
     setIsProcessing(null);
   }
