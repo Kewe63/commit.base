@@ -600,7 +600,7 @@ function CalendarTab({ comm }) {
   );
 }
 
-function ContractTab({ comm, onOpenHistory }) {
+function ContractTab({ comm, selectedNetwork, networks, onOpenHistory }) {
   const { t, theme } = useGlobalState();
   const { duration, amount, habitId, txHash, payoutTxHash, checkins, customHabit } = comm;
   const sel = habitId === "custom" ? { id: "custom", icon: "✨", label: customHabit?.label || t("customWrite"), sub: customHabit?.sub || "", color: "#fcd34d" } : getHabits(t).find(h => h.id === habitId);
@@ -1028,7 +1028,7 @@ export default function App() {
                   {/* Tab content */}
                   {globalTab === "active" && <ActiveTab comm={comm} processingThis={isProcessing === comm.id} onCheckin={() => handleCheckin(comm.id, comm.duration)} />}
                   {globalTab === "calendar" && <CalendarTab comm={comm} />}
-                  {globalTab === "contract" && <ContractTab comm={comm} onOpenHistory={openHistory} />}
+                  {globalTab === "contract" && <ContractTab comm={comm} selectedNetwork={selectedNetwork} networks={networks} onOpenHistory={openHistory} />}
                </div>
              )
           })}
