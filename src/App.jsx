@@ -847,17 +847,16 @@ export default function App() {
     const parsedAmount = parseUnits(cfg.amount.toString(), 6);
 
     try {
-      // Step 1: approve (builder suffix olmadan — standart ERC20 approve)
+      // Step 1: approve
       const approveTxHash = await writeContractAsync({
         address: usdcAddress,
         abi: erc20Abi,
         functionName: 'approve',
         args: [vaultAddress, parsedAmount],
-        chainId: selectedNetwork,
       });
       await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
 
-      // Step 2: createCommitment — builder suffix varsa sendTransaction ile ekle
+      // Step 2: createCommitment (builder suffix append via sendTransaction)
       const createData = encodeFunctionData({
         abi: CommitmentVaultABI,
         functionName: 'createCommitment',
@@ -870,7 +869,6 @@ export default function App() {
       sendTransaction({
         to: vaultAddress,
         data: createTxData,
-        chainId: selectedNetwork,
       });
     } catch (err) {
       console.error("handleStart error:", err);
