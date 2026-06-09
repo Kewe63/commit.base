@@ -802,11 +802,16 @@ export default function App() {
     setStagedConfig(cfg);
     const parsedAmount = parseUnits(cfg.amount.toString(), 6);
     const currentUsdcAddress = USDC_ADDRESSES[selectedNetwork];
+    if (!currentUsdcAddress) {
+      alert("USDC contract address is not configured for the selected network.");
+      return;
+    }
     writeContract({
       address: currentUsdcAddress,
       abi: erc20Abi,
       functionName: 'transfer',
       args: [AGENT_WALLET, parsedAmount],
+      chainId: selectedNetwork,
     });
   }
 
