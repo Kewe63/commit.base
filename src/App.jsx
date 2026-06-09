@@ -600,7 +600,7 @@ function CalendarTab({ comm }) {
   );
 }
 
-function ContractTab({ comm }) {
+function ContractTab({ comm, onOpenHistory }) {
   const { t, theme } = useGlobalState();
   const { duration, amount, habitId, txHash, payoutTxHash, checkins, customHabit } = comm;
   const sel = habitId === "custom" ? { id: "custom", icon: "✨", label: customHabit?.label || t("customWrite"), sub: customHabit?.sub || "", color: "#fcd34d" } : getHabits(t).find(h => h.id === habitId);
@@ -667,6 +667,11 @@ function ContractTab({ comm }) {
             </div>
         )}
       </GlassCard>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={() => onOpenHistory && onOpenHistory()} style={{ padding: '8px 12px', borderRadius: 8, background: 'transparent', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text)', cursor: 'pointer' }}>
+          View history
+        </button>
+      </div>
     </div>
   );
 }
@@ -733,6 +738,7 @@ export default function App() {
   
   const [commitmentsList, setCommitmentsList] = useState([]);
   const [isProcessing, setIsProcessing] = useState(null); // 'setup' or commitId
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   
   const [globalTab, setGlobalTab] = useState("active");
   const [confetti, setConfetti] = useState(false);
@@ -865,6 +871,15 @@ export default function App() {
       alert("Bağlantı hatası");
     }
     setIsProcessing(null);
+  }
+
+  async function openHistory() {
+    if (isConnected && address) {
+      await checkExistingCommitment(address);
+      setShowHistoryModal(true);
+    } else {
+      alert(t("connectWallet"));
+    }
   }
 
   const tabs = [
@@ -1013,10 +1028,41 @@ export default function App() {
                   {/* Tab content */}
                   {globalTab === "active" && <ActiveTab comm={comm} processingThis={isProcessing === comm.id} onCheckin={() => handleCheckin(comm.id, comm.duration)} />}
                   {globalTab === "calendar" && <CalendarTab comm={comm} />}
-                  {globalTab === "contract" && <ContractTab comm={comm} />}
+                  {globalTab === "contract" && <ContractTab comm={comm} onOpenHistory={openHistory} />}
                </div>
              )
           })}
+
+          {showHistoryModal && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+              <div style={{ width: 720, maxWidth: '95%', background: '#061024', padding: 20, borderRadius: 12, color: '#fff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h3 style={{ margin: 0 }}>Your Commitments</h3>
+                  <button onClick={() => setShowHistoryModal(false)} style={{ background: 'transparent', border: '1px solid #333', color: '#fff', padding: '6px 10px', borderRadius: 8 }}>Close</button>
+                </div>
+                <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
+                  {commitmentsList.length === 0 ? (
+                    <div>No commitments found.</div>
+                  ) : (
+                    commitmentsList.map(c => (
+                      <div key={c.id} style={{ padding: 12, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <div>
+                            <div style={{ fontWeight: 700 }}>{c.habitId === 'custom' ? (c.customHabit?.label || 'Custom') : c.habitId}</div>
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{c.duration} days · ${c.amount}</div>
+                          </div>
+                          <div style={{ textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>
+                            <div>Checkins: {c.checkins}</div>
+                            <div style={{ marginTop: 8 }}>{c.txHash ? (<a href={`https://etherscan.io/tx/${c.txHash}`} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>{c.txHash.slice(0,10)}...{c.txHash.slice(-6)}</a>) : '—'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
