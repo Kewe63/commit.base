@@ -79,7 +79,7 @@ const USDC_ADDRESSES = {
 };
 const VAULT_ADDRESSES = {
   [baseSepolia.id]: "0x5bf1Db1C1b238C2E3B769AdBd4b9370e5D3BAF84", // Base Sepolia
-  [base.id]: "",  // Base Mainnet — deploy sonrası eklenecek
+  [base.id]: "0x34D15fCA31102211F98c3a0D8F3715Aa4197DD3a",  // Base Mainnet
 };
 const erc20Abi = [
   {
@@ -615,14 +615,15 @@ function ContractTab({ comm, selectedNetwork, networks, onOpenHistory }) {
       <GlassCard hover={false} style={{ padding: 18 }}>
         <div style={{ fontSize: 10, color: `var(--text-darker)`, letterSpacing: "0.1em", marginBottom: 14 }}>{t("contractInfo")}</div>
         {(() => {
-          const usdcAddr = USDC_ADDRESSES[selectedNetwork] || "0x0";
+          const netId = comm.chainId ?? selectedNetwork;
+          const usdcAddr = USDC_ADDRESSES[netId] || "0x0";
           const usdcLabel = usdcAddr && usdcAddr.length > 10 ? `USDC: ${usdcAddr.slice(0,6)}...${usdcAddr.slice(-4)}` : `USDC: ${usdcAddr}`;
-          const vaultAddr = VAULT_ADDRESSES[selectedNetwork] || "—";
+          const vaultAddr = VAULT_ADDRESSES[netId] || "—";
           const vaultLabel = vaultAddr.length > 10 ? `${vaultAddr.slice(0,6)}...${vaultAddr.slice(-4)}` : vaultAddr;
           return [
             [t("cAddress"), vaultLabel],
             ["USDC", usdcLabel],
-            ["Network", networks.find(n => n.id === selectedNetwork)?.name || "Base Mainnet"],
+            ["Network", networks.find(n => n.id === netId)?.name || "—"],
             ["Stake", `$${amount}`],
             [t("successThresh"), "%80"],
           ].map(([k, v]) => (
@@ -757,15 +758,26 @@ export default function App() {
   ];
 
   const handleNetworkSwitch = async (netId) => {
-    setSelectedNetwork(netId);
-    if (isConnected) {
-      try {
-        await switchChainAsync({ chainId: netId });
-      } catch (err) {
-        console.error("Network switch failed:", err);
-      }
+    if (!isConnected) {
+      setSelectedNetwork(netId);
+      return;
+    }
+    try {
+      await switchChainAsync({ chainId: netId });
+      setSelectedNetwork(netId);
+    } catch (err) {
+      console.error("Network switch failed:", err);
+      // Cüzdan ağ değişimini reddetti/başarısız: dropdown'ı gerçek ağa geri al
+      if (currentChainId) setSelectedNetwork(currentChainId);
     }
   };
+
+  // Dropdown her zaman cüzdanın GERÇEK ağını yansıtsın (UI yalan söylemesin)
+  useEffect(() => {
+    if (isConnected && currentChainId) {
+      setSelectedNetwork(currentChainId);
+    }
+  }, [isConnected, currentChainId]);
 
   useEffect(() => {
     if (isConnected && address) {
@@ -826,8 +838,9 @@ export default function App() {
 
     const vaultAddress = VAULT_ADDRESSES[selectedNetwork];
     if (!vaultAddress) {
-      // Mainnet'te kontrat yok, otomatik Sepolia'ya geç
-      await handleNetworkSwitch(baseSepolia.id);
+      alert(lang === 'tr'
+        ? "Bu ağda kontrat henüz tanımlı değil. Lütfen başka bir ağ seçin."
+        : "Contract is not yet deployed on this network. Please choose another network.");
       return;
     }
     const usdcAddress = USDC_ADDRESSES[selectedNetwork];
@@ -889,6 +902,7 @@ export default function App() {
       const newCommitment = {
         id: commitmentId,
         onchainId: commitmentId,
+        chainId: selectedNetwork,
         amount: cfg.amount,
         habitId: cfg.habit,
         customHabit: cfg.isCustomHabit ? { label: cfg.customHabitLabel, sub: cfg.customHabitSub } : null,
@@ -916,17 +930,30 @@ export default function App() {
 
   async function handleCheckin(commitId, cDuration) {
     setIsProcessing(commitId);
-    const vaultAddress = VAULT_ADDRESSES[selectedNetwork];
+
+    // Bu taahhüt hangi ağda oluşturulduysa o ağı kullan (dropdown'dan bağımsız)
+    const local = localStorage.getItem(`commitments_${address}`);
+    const list = local ? JSON.parse(local) : [];
+    const commitment = list.find(c => c.id === commitId);
+    const commChainId = commitment?.chainId ?? selectedNetwork;
+    const vaultAddress = VAULT_ADDRESSES[commChainId];
     if (!vaultAddress) {
-      alert("Kontrat bu ağda tanımlı değil.");
+      alert(lang === 'tr' ? "Kontrat bu ağda tanımlı değil." : "Contract not deployed on this network.");
       setIsProcessing(null);
       return;
     }
 
+    // Cüzdan taahhüdün ağında değilse o ağa geç
+    if (chainId !== commChainId) {
+      try {
+        await switchChainAsync({ chainId: commChainId });
+      } catch {
+        setIsProcessing(null);
+        return;
+      }
+    }
+
     // onchainId varsa onu kullan, yoksa commitId'yi dene
-    const local = localStorage.getItem(`commitments_${address}`);
-    const list = local ? JSON.parse(local) : [];
-    const commitment = list.find(c => c.id === commitId);
     const onchainId = commitment?.onchainId ?? commitId;
 
     try {
@@ -935,7 +962,7 @@ export default function App() {
         abi: CommitmentVaultABI,
         functionName: 'checkin',
         args: [BigInt(onchainId)],
-        chainId: selectedNetwork,
+        chainId: commChainId,
       });
       await publicClient.waitForTransactionReceipt({ hash });
 

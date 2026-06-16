@@ -14,6 +14,10 @@ dist-ssr
 agent-backend/.env
 contracts/.env
 
+# Hardhat build output
+contracts/artifacts
+contracts/cache
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
