@@ -88,6 +88,20 @@ const erc20Abi = [
     "outputs": [{ "name": "", "type": "bool" }],
     "stateMutability": "nonpayable",
     "type": "function"
+  },
+  {
+    "inputs": [{ "name": "account", "type": "address" }],
+    "name": "balanceOf",
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "name": "owner", "type": "address" }, { "name": "spender", "type": "address" }],
+    "name": "allowance",
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
   }
 ];
 const API_URL = import.meta.env.VITE_API_URL || "/api";
@@ -853,16 +867,36 @@ export default function App() {
     const parsedAmount = parseUnits(cfg.amount.toString(), 6);
 
     try {
-      // Step 1: approve
-      console.log("Step 1: approve", { usdcAddress, vaultAddress, parsedAmount });
-      const approveTxHash = await writeContractAsync({
-        address: usdcAddress,
-        abi: erc20Abi,
-        functionName: 'approve',
-        args: [vaultAddress, parsedAmount],
+      // Ön kontrol: bakiye yeterli mi?
+      const balance = await publicClient.readContract({
+        address: usdcAddress, abi: erc20Abi, functionName: 'balanceOf', args: [address],
       });
-      console.log("Approve tx:", approveTxHash);
-      await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
+      if (balance < parsedAmount) {
+        const have = (Number(balance) / 1e6).toString();
+        alert(lang === 'tr'
+          ? `Yetersiz USDC bakiyesi. Bu ağda ${have} USDC'niz var, ${cfg.amount} USDC gerekiyor.`
+          : `Insufficient USDC balance. You have ${have} USDC on this network, but ${cfg.amount} USDC is required.`);
+        setStagedConfig(null);
+        return;
+      }
+
+      // Step 1: approve — sadece mevcut allowance yetersizse
+      const currentAllowance = await publicClient.readContract({
+        address: usdcAddress, abi: erc20Abi, functionName: 'allowance', args: [address, vaultAddress],
+      });
+      if (currentAllowance < parsedAmount) {
+        console.log("Step 1: approve", { usdcAddress, vaultAddress, parsedAmount });
+        const approveTxHash = await writeContractAsync({
+          address: usdcAddress,
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [vaultAddress, parsedAmount],
+        });
+        console.log("Approve tx:", approveTxHash);
+        await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
+      } else {
+        console.log("Allowance yeterli, approve atlandı.");
+      }
 
       // Step 2: createCommitment
       console.log("Step 2: createCommitment", { vaultAddress, parsedAmount, duration: cfg.duration, charity: cfg.charity });
@@ -883,48 +917,59 @@ export default function App() {
 
   async function registerPledgeWithAgent(hash, cfg) {
     setIsProcessing("setup");
+    const vaultAddress = VAULT_ADDRESSES[selectedNetwork];
+    let commitmentId = null;
+
+    // 1) İşlemin onaylanmasını (mine edilmesini) bekle ve event'ten id'yi oku
     try {
-      const vaultAddress = VAULT_ADDRESSES[selectedNetwork];
-
-      // receipt zaten confirmed, direkt kullan
-      const receipt = await publicClient.getTransactionReceipt({ hash });
-
+      const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 120000 });
       // CommitmentCreated event: topics[1] = id (indexed uint256)
       const createdLog = receipt?.logs?.find(
         l => l.address?.toLowerCase() === vaultAddress?.toLowerCase()
       );
-      const commitmentId = createdLog?.topics?.[1]
-        ? BigInt(createdLog.topics[1]).toString()
-        : Date.now().toString();
-
-      console.log("commitmentId parsed:", commitmentId);
-
-      const newCommitment = {
-        id: commitmentId,
-        onchainId: commitmentId,
-        chainId: selectedNetwork,
-        amount: cfg.amount,
-        habitId: cfg.habit,
-        customHabit: cfg.isCustomHabit ? { label: cfg.customHabitLabel, sub: cfg.customHabitSub } : null,
-        duration: cfg.duration,
-        charity: cfg.charity,
-        txHash: hash,
-        checkins: 0,
-        startDate: new Date().toISOString(),
-      };
-
-      // localStorage'a kaydet
-      const local = localStorage.getItem(`commitments_${address}`);
-      const list = local ? JSON.parse(local) : [];
-      list.push(newCommitment);
-      localStorage.setItem(`commitments_${address}`, JSON.stringify(list));
-
-      setStagedConfig(null);
-      setCommitmentsList(list.slice().reverse());
-      setScreen("dashboard");
+      if (createdLog?.topics?.[1]) {
+        commitmentId = BigInt(createdLog.topics[1]).toString();
+      }
     } catch (err) {
-      console.error("registerPledgeWithAgent error:", err);
+      console.error("waitForTransactionReceipt hatası:", err);
     }
+
+    // 2) Event okunamadıysa zincirden son id'yi türet
+    if (commitmentId === null) {
+      try {
+        const next = await publicClient.readContract({
+          address: vaultAddress, abi: CommitmentVaultABI, functionName: 'nextCommitmentId',
+        });
+        commitmentId = (BigInt(next) - 1n).toString();
+      } catch {
+        commitmentId = Date.now().toString();
+      }
+    }
+    console.log("commitmentId:", commitmentId);
+
+    // 3) Kaydet ve dashboard'a geç (her durumda)
+    const newCommitment = {
+      id: commitmentId,
+      onchainId: commitmentId,
+      chainId: selectedNetwork,
+      amount: cfg.amount,
+      habitId: cfg.habit,
+      customHabit: cfg.isCustomHabit ? { label: cfg.customHabitLabel, sub: cfg.customHabitSub } : null,
+      duration: cfg.duration,
+      charity: cfg.charity,
+      txHash: hash,
+      checkins: 0,
+      startDate: new Date().toISOString(),
+    };
+
+    const local = localStorage.getItem(`commitments_${address}`);
+    const list = local ? JSON.parse(local) : [];
+    list.push(newCommitment);
+    localStorage.setItem(`commitments_${address}`, JSON.stringify(list));
+
+    setStagedConfig(null);
+    setCommitmentsList(list.slice().reverse());
+    setScreen("dashboard");
     setIsProcessing(null);
   }
 
