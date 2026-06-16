@@ -1064,7 +1064,7 @@ export default function App() {
   const isSetupDisabled = isProcessing === "setup";
 
   return (
-    <div data-theme={theme} style={{ minHeight: "100vh", position: "relative" }}>
+    <div data-theme={theme} style={{ minHeight: "100dvh", position: "relative" }}>
       <InteractiveBG />
       <Confetti active={confetti} />
       <style>{`
@@ -1075,25 +1075,34 @@ export default function App() {
           --line-strong: rgba(255,255,255,0.1);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg); transition: background 0.3s; color: var(--text); }
+        html { -webkit-text-size-adjust: 100%; }
+        body {
+          background: var(--bg); transition: background 0.3s; color: var(--text);
+          overflow-x: hidden;
+          -webkit-font-smoothing: antialiased;
+          -webkit-tap-highlight-color: transparent;
+        }
+        button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        /* iOS: metin/sayı input'u 16px'den küçükse odakta otomatik zoom yapar; engelle */
+        input, textarea { font-size: 16px !important; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--card-border-hover); border-radius: 2px; }
         .mobile-grid-2 { display: grid; grid-template-columns: 1fr 1fr; }
         .mobile-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); }
-        @media (max-width: 380px) {
-          .mobile-grid-2, .mobile-grid-3 { grid-template-columns: 1fr; }
+        @media (max-width: 340px) {
+          .mobile-grid-3 { grid-template-columns: 1fr 1fr; }
         }
 `}</style>
 
       <div style={{
         position: "relative", zIndex: 1,
-        minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center",
+        minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center",
         fontFamily: "'DM Mono', monospace", color: "#e8e8f0",
-        padding: "0 16px 48px",
+        padding: "0 calc(16px + env(safe-area-inset-right)) calc(48px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))",
       }}>
         {/* Header */}
-        <div style={{ width: "100%", maxWidth: 440, paddingTop: 36, marginBottom: 28 }}>
+        <div style={{ width: "100%", maxWidth: 440, paddingTop: "calc(36px + env(safe-area-inset-top))", marginBottom: 28 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
             <div>
               <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: `var(--text)` }}>
