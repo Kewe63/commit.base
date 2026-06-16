@@ -7,9 +7,21 @@
   "frame": {
     "version": "1",
     "name": "commit.base",
+    "subtitle": "Onchain habit accountability",
+    "description": "Stake USDC and commit to a daily habit. Check in every day and get your stake refunded when you follow through; miss your goal and it goes to a penalty address. Onchain accountability on Base.",
     "iconUrl": "https://commit-base.vercel.app/favicon.png",
     "homeUrl": "https://commit-base.vercel.app",
     "imageUrl": "https://commit-base.vercel.app/favicon.png",
-    "buttonText": "Launch commit.base"
+    "buttonText": "Launch commit.base",
+    "splashImageUrl": "https://commit-base.vercel.app/favicon.png",
+    "splashBackgroundColor": "#0052FF",
+    "primaryCategory": "finance",
+    "tags": ["base", "habit", "accountability", "usdc", "defi"],
+    "tagline": "Commit. Check in. Get refunded.",
+    "heroImageUrl": "https://commit-base.vercel.app/favicon.png",
+    "screenshotUrls": ["https://commit-base.vercel.app/favicon.png"],
+    "ogTitle": "commit.base",
+    "ogDescription": "Onchain habit accountability on Base. Stake USDC and follow through.",
+    "ogImageUrl": "https://commit-base.vercel.app/favicon.png"
   }
 }
