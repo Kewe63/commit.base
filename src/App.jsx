@@ -1190,6 +1190,33 @@ export default function App() {
         /* Network status dot */
         .ui-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 0 0 currentColor; animation: pulseGlow 2s infinite; }
 
+        /* ===== Jumping cube loader (Uiverse.io by JaydipPrajapati1910), scaled for logo ===== */
+        .logo-loader { width: 22px; height: 22px; position: relative; flex: 0 0 auto; }
+        .logo-loader:before {
+          content: ''; width: 22px; height: 3px; background: var(--text-darker);
+          position: absolute; top: 27px; left: 0; border-radius: 50%;
+          animation: shadow324 0.5s linear infinite;
+        }
+        .logo-loader:after {
+          content: ''; width: 100%; height: 100%; background: rgb(61,106,255);
+          position: absolute; top: 0; left: 0; border-radius: 3px;
+          animation: jump7456 0.5s linear infinite;
+        }
+        @keyframes jump7456 {
+          15% { border-bottom-right-radius: 2px; }
+          25% { transform: translateY(4px) rotate(22.5deg); }
+          50% { transform: translateY(8px) scale(1, .9) rotate(45deg); border-bottom-right-radius: 18px; }
+          75% { transform: translateY(4px) rotate(67.5deg); }
+          100% { transform: translateY(0) rotate(90deg); }
+        }
+        @keyframes shadow324 {
+          0%, 100% { transform: scale(1, 1); }
+          50% { transform: scale(1.2, 1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .logo-loader:before, .logo-loader:after { animation: none !important; }
+        }
+
         /* ===== Day/Night theme toggle (uiverse-inspired) ===== */
         .theme-toggle {
           position: relative; width: 52px; height: 28px; flex: 0 0 auto;
@@ -1230,8 +1257,11 @@ export default function App() {
         <div style={{ width: "100%", maxWidth: 440, paddingTop: "calc(36px + env(safe-area-inset-top))", marginBottom: 28 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, gap: 8, flexWrap: "wrap" }}>
             <div style={{ flex: "1 1 auto", minWidth: 0 }}>
-              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: `var(--text)` }}>
-                commit<span style={{ color: "#0000FF" }}>.base</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span className="logo-loader" aria-hidden="true" />
+                <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: `var(--text)` }}>
+                  commit<span style={{ color: "#0000FF" }}>.base</span>
+                </div>
               </div>
               <div style={{ fontSize: 9, color: `var(--text-darker)`, letterSpacing: "0.14em", marginTop: 2 }}>
                 {t("appSubtitle")}
