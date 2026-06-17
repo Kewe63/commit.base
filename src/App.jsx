@@ -47,18 +47,24 @@ const TRANSLATIONS = {
   }
 };
 let currentLang = "tr";
+let currentTheme = (typeof localStorage !== "undefined" && localStorage.getItem("theme")) || "dark";
 const themeListeners = new Set();
 function useGlobalState() {
-  const [state, setState] = useState({ lang: currentLang });
+  const [state, setState] = useState({ lang: currentLang, theme: currentTheme });
   useEffect(() => {
-    const fn = () => setState({ lang: currentLang });
+    const fn = () => setState({ lang: currentLang, theme: currentTheme });
     themeListeners.add(fn);
     return () => themeListeners.delete(fn);
   }, []);
   const t = (k) => TRANSLATIONS[state.lang][k] || k;
-  return { t, lang: state.lang, theme: "dark" };
+  return { t, lang: state.lang, theme: state.theme };
 }
 export function toggleLang() { currentLang = currentLang === "tr" ? "en" : "tr"; themeListeners.forEach(f => f()); }
+export function toggleTheme() {
+  currentTheme = currentTheme === "dark" ? "light" : "dark";
+  if (typeof localStorage !== "undefined") localStorage.setItem("theme", currentTheme);
+  themeListeners.forEach(f => f());
+}
 
 const getHabits = (t) => [
   { id: "sport", icon: <i className="bx bx-dumbbell"></i>, label: t("sport"), sub: t("sportSub"), color: "#ff6b35" },
@@ -135,9 +141,10 @@ function InteractiveBG() {
     window.addEventListener("resize", onResize);
     window.addEventListener("mousemove", onMove);
 
+    const isLight = theme === "light";
     const draw = () => {
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = "#06060e";
+      ctx.fillStyle = isLight ? "#f4f5fa" : "#06060e";
       ctx.fillRect(0, 0, W, H);
 
       orbs.current.forEach((o, i) => {
@@ -148,7 +155,7 @@ function InteractiveBG() {
         if (o.y < -o.r) o.y = H + o.r;
         if (o.y > H + o.r) o.y = -o.r;
         const g = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.r);
-        g.addColorStop(0, `rgba(${o.color},0.18)`);
+        g.addColorStop(0, `rgba(${o.color},${isLight ? 0.12 : 0.18})`);
         g.addColorStop(1, `rgba(${o.color},0)`);
         ctx.beginPath();
         ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
@@ -157,7 +164,7 @@ function InteractiveBG() {
       });
 
       // grid noise
-      ctx.strokeStyle = "rgba(255,255,255,0.018)";
+      ctx.strokeStyle = isLight ? "rgba(11,13,23,0.03)" : "rgba(255,255,255,0.018)";
       ctx.lineWidth = 0.5;
       const gStep = 60;
       for (let x = 0; x < W; x += gStep) {
@@ -175,7 +182,7 @@ function InteractiveBG() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMove);
     };
-  }, []);
+  }, [theme]);
 
   return (
     <canvas ref={canvasRef} style={{
@@ -777,6 +784,12 @@ export default function App() {
   const [globalTab, setGlobalTab] = useState("active");
   const [confetti, setConfetti] = useState(false);
 
+  // Tema'yı body'e yansıt (scrollbar/overscroll alanı da doğru renkte olsun)
+  useEffect(() => {
+    document.body.setAttribute("data-theme", theme);
+    document.documentElement.style.colorScheme = theme;
+  }, [theme]);
+
   const networks = [
     { id: base.id, name: "Base Mainnet", label: "🌐 Base Mainnet" },
     { id: baseSepolia.id, name: "Base Sepolia", label: "🧪 Base Sepolia" }
@@ -1080,10 +1093,15 @@ export default function App() {
       <Confetti active={confetti} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&display=swap');
-        :root {
+        :root, [data-theme="dark"] {
           --bg: #06060e; --text: #fff; --text-muted: rgba(255,255,255,0.6); --text-dark: rgba(255,255,255,0.3); --text-darker: rgba(255,255,255,0.2);
           --card-bg: rgba(255,255,255,0.04); --card-bg-hover: rgba(255,255,255,0.07); --card-border: rgba(255,255,255,0.07); --card-border-hover: rgba(255,255,255,0.15);
           --line-strong: rgba(255,255,255,0.1);
+        }
+        [data-theme="light"] {
+          --bg: #f4f5fa; --text: #0b0d17; --text-muted: rgba(11,13,23,0.7); --text-dark: rgba(11,13,23,0.45); --text-darker: rgba(11,13,23,0.32);
+          --card-bg: rgba(255,255,255,0.75); --card-bg-hover: rgba(255,255,255,0.95); --card-border: rgba(11,13,23,0.1); --card-border-hover: rgba(11,13,23,0.2);
+          --line-strong: rgba(11,13,23,0.12);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { -webkit-text-size-adjust: 100%; }
@@ -1096,6 +1114,21 @@ export default function App() {
         button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
         /* iOS: metin/sayı input'u 16px'den küçükse odakta otomatik zoom yapar; engelle */
         input, textarea { font-size: 16px !important; }
+        input::placeholder, textarea::placeholder { color: var(--text-darker); }
+        /* Light modda saydam-beyaz kenarlıklar kaybolur; input/select'leri okunur kıl */
+        [data-theme="light"] input,
+        [data-theme="light"] textarea,
+        [data-theme="light"] select {
+          background: rgba(255,255,255,0.9) !important;
+          border-color: var(--card-border) !important;
+          color: var(--text) !important;
+        }
+        [data-theme="light"] input:focus,
+        [data-theme="light"] textarea:focus { border-color: #34d399 !important; }
+        /* Mobil: header kontrol butonlarına rahat dokunma yüksekliği */
+        @media (max-width: 440px) {
+          .theme-toggle { width: 48px; height: 26px; }
+        }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--card-border-hover); border-radius: 2px; }
@@ -1157,6 +1190,30 @@ export default function App() {
         /* Network status dot */
         .ui-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 0 0 currentColor; animation: pulseGlow 2s infinite; }
 
+        /* ===== Day/Night theme toggle (uiverse-inspired) ===== */
+        .theme-toggle {
+          position: relative; width: 52px; height: 28px; flex: 0 0 auto;
+          border-radius: 50px; cursor: pointer; border: 1px solid var(--card-border);
+          background: var(--card-bg); overflow: hidden; padding: 0;
+          transition: background .4s, border-color .4s;
+        }
+        [data-theme="dark"] .theme-toggle { background: linear-gradient(135deg,#1a1c3a,#0a0e27); }
+        [data-theme="light"] .theme-toggle { background: linear-gradient(135deg,#aee1ff,#fbd786); }
+        .theme-toggle .knob {
+          position: absolute; top: 2px; left: 2px; width: 22px; height: 22px;
+          border-radius: 50%; display: flex; align-items: center; justify-content: center;
+          font-size: 14px; transition: transform .45s cubic-bezier(.4,0,.2,1), background .4s, color .4s;
+        }
+        [data-theme="dark"] .theme-toggle .knob { transform: translateX(0); background: #11132a; color: #cfd2ff; }
+        [data-theme="light"] .theme-toggle .knob { transform: translateX(24px); background: #fff7e0; color: #f59e0b; }
+        .theme-toggle .knob i { animation: floaty 3s ease-in-out infinite; }
+        /* faint sun/moon hint on the opposite side */
+        .theme-toggle .bg-icon { position: absolute; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: .55; }
+        .theme-toggle .bg-icon.sun { left: 7px; color: #fff3c4; }
+        .theme-toggle .bg-icon.moon { right: 7px; color: #c7cbff; }
+        [data-theme="light"] .theme-toggle .bg-icon.moon { opacity: 0; }
+        [data-theme="dark"] .theme-toggle .bg-icon.sun { opacity: 0; }
+
         @media (prefers-reduced-motion: reduce) {
           .ui-gradient, .ui-pulse, .ui-dot, .ui-spinner { animation: none !important; }
           .ui-btn::after, .ui-card::before { display: none; }
@@ -1171,8 +1228,8 @@ export default function App() {
       }}>
         {/* Header */}
         <div style={{ width: "100%", maxWidth: 440, paddingTop: "calc(36px + env(safe-area-inset-top))", marginBottom: 28 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-            <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, gap: 8, flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 auto", minWidth: 0 }}>
               <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em", color: `var(--text)` }}>
                 commit<span style={{ color: "#0000FF" }}>.base</span>
               </div>
@@ -1180,8 +1237,8 @@ export default function App() {
                 {t("appSubtitle")}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <select 
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", flex: "0 1 auto" }}>
+              <select
                 value={selectedNetwork}
                 onChange={(e) => handleNetworkSwitch(Number(e.target.value))}
                 style={{ 
@@ -1197,11 +1254,18 @@ export default function App() {
                 }}
               >
                 {networks.map(net => (
-                  <option key={net.id} value={net.id} style={{ background: "#0a0e27", color: "var(--text)" }}>
+                  <option key={net.id} value={net.id} style={{ background: theme === "light" ? "#ffffff" : "#0a0e27", color: theme === "light" ? "#0b0d17" : "#ffffff" }}>
                     {net.label}
                   </option>
                 ))}
               </select>
+              <button onClick={toggleTheme} className="theme-toggle" aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} title={theme === "dark" ? "Gündüz modu" : "Gece modu"}>
+                <i className="bx bxs-sun bg-icon sun"></i>
+                <i className="bx bxs-moon bg-icon moon"></i>
+                <span className="knob">
+                  <i className={theme === "dark" ? "bx bxs-moon" : "bx bxs-sun"}></i>
+                </span>
+              </button>
               <button onClick={toggleLang} style={{ background: "transparent", border: "1px solid var(--card-border)", borderRadius: 8, padding: "4px 8px", color: "var(--text)", cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>{lang === 'tr' ? '🇬🇧 EN' : '🇹🇷 TR'}</button>
               {!isConnected ? (
                 <button onClick={() => connect({ connector: injected(), chainId: selectedNetwork })} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, color: `var(--text)`, fontSize: 9, padding: "4px 10px", cursor: "pointer" }}>{t("connectBtn")}</button>
@@ -1218,7 +1282,7 @@ export default function App() {
             </div>
           )}
 
-          <div style={{ height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.1), transparent)", marginTop: isConnected ? 12 : 16 }} />
+          <div style={{ height: 1, background: "linear-gradient(90deg, var(--line-strong), transparent)", marginTop: isConnected ? 12 : 16 }} />
         </div>
 
         <div style={{ width: "100%", maxWidth: 440 }}>
