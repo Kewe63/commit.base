@@ -202,6 +202,7 @@ function GlassCard({ children, style = {}, onClick, hover = true }) {
   const [hov, setHov] = useState(false);
   return (
     <div onClick={onClick}
+      className={onClick ? "ui-card" : ""}
       onMouseEnter={() => hover && setHov(true)}
       onMouseLeave={() => hover && setHov(false)}
       style={{
@@ -210,6 +211,7 @@ function GlassCard({ children, style = {}, onClick, hover = true }) {
         borderRadius: 16, backdropFilter: "blur(20px)",
         transition: "all 0.2s cubic-bezier(.4,0,.2,1)",
         transform: hov && onClick ? "translateY(-2px)" : "none",
+        boxShadow: hov && onClick ? "0 10px 30px -12px rgba(0,0,0,0.5)" : "none",
         cursor: onClick ? "pointer" : "default",
         ...style,
       }}>
@@ -234,9 +236,10 @@ function TabBar({ tabs, active, onChange }) {
           color: active === t.id ? "#fff" : `var(--text-dark)`,
           fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: "0.06em",
           display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-          transition: "all 0.2s",
+          transition: "all 0.25s cubic-bezier(.4,0,.2,1)",
+          transform: active === t.id ? "translateY(-1px)" : "none",
         }}>
-          <span style={{ fontSize: 16 }}>{t.icon}</span>
+          <span style={{ fontSize: 16, animation: active === t.id ? "floaty 2.5s ease-in-out infinite" : "none" }}>{t.icon}</span>
           <span>{t.label}</span>
         </button>
       ))}
@@ -330,7 +333,7 @@ function SetupFlow({ onStart, btnText, isTxDisabled }) {
             </div>
           )}
 
-          <button disabled={!habit || (isCustomHabit && !customHabitLabel)} onClick={() => setStep(1)} style={{
+          <button disabled={!habit || (isCustomHabit && !customHabitLabel)} onClick={() => setStep(1)} className="ui-btn" style={{
             marginTop: 16, width: "100%", padding: "14px", border: "none", borderRadius: 12,
             background: habit && (!isCustomHabit || customHabitLabel) ? "#34d399" : `var(--card-border)`,
             color: habit && (!isCustomHabit || customHabitLabel) ? "#06060e" : `var(--text-darker)`,
@@ -370,7 +373,7 @@ function SetupFlow({ onStart, btnText, isTxDisabled }) {
           </GlassCard>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => setStep(0)} style={{ padding: "12px 20px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, background: "transparent", color: `var(--text-dark)`, cursor: "pointer", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>← geri</button>
-            <button disabled={!duration || duration < 1} onClick={() => setStep(2)} style={{ flex: 1, padding: "12px", border: "none", borderRadius: 10, background: duration > 0 ? "#34d399" : `var(--line-strong)`, color: duration > 0 ? "#06060e" : `var(--text-dark)`, fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.08em", cursor: duration > 0 ? "pointer" : "not-allowed" }}>devam et →</button>
+            <button disabled={!duration || duration < 1} onClick={() => setStep(2)} className="ui-btn" style={{ flex: 1, padding: "12px", border: "none", borderRadius: 10, background: duration > 0 ? "#34d399" : `var(--line-strong)`, color: duration > 0 ? "#06060e" : `var(--text-dark)`, fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.08em", cursor: duration > 0 ? "pointer" : "not-allowed" }}>devam et →</button>
           </div>
         </div>
       )}
@@ -422,7 +425,7 @@ function SetupFlow({ onStart, btnText, isTxDisabled }) {
           </GlassCard>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => setStep(1)} style={{ padding: "12px 20px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, background: "transparent", color: `var(--text-dark)`, cursor: "pointer", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>← geri</button>
-            <button onClick={() => setStep(3)} disabled={!charity || !amount || Number(amount) <= 0} style={{ flex: 1, padding: "12px", border: "none", borderRadius: 10, background: charity && amount > 0 ? "#a78bfa" : `var(--line-strong)`, color: charity && amount > 0 ? "#06060e" : `var(--text-dark)`, fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.08em", cursor: charity && amount > 0 ? "pointer" : "not-allowed", transition: "all 0.2s" }}>devam et →</button>
+            <button onClick={() => setStep(3)} disabled={!charity || !amount || Number(amount) <= 0} className="ui-btn" style={{ flex: 1, padding: "12px", border: "none", borderRadius: 10, background: charity && amount > 0 ? "#a78bfa" : `var(--line-strong)`, color: charity && amount > 0 ? "#06060e" : `var(--text-dark)`, fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.08em", cursor: charity && amount > 0 ? "pointer" : "not-allowed" }}>devam et →</button>
           </div>
         </div>
       )}
@@ -457,8 +460,8 @@ function SetupFlow({ onStart, btnText, isTxDisabled }) {
           </GlassCard>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => setStep(2)} disabled={isTxDisabled} style={{ padding: "12px 20px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, background: "transparent", color: `var(--text-dark)`, cursor: isTxDisabled ? "not-allowed" : "pointer", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>← geri</button>
-            <button onClick={() => onStart({ habit, isCustomHabit, customHabitLabel, customHabitSub, duration, amount, charity })} disabled={isTxDisabled} style={{ flex: 1, padding: "14px", border: "none", borderRadius: 10, background: isTxDisabled ? `var(--line-strong)` : "linear-gradient(135deg,#34d399,#a78bfa)", color: isTxDisabled ? `var(--text-dark)` : "#06060e", fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 700, cursor: isTxDisabled ? "not-allowed" : "pointer", letterSpacing: "0.02em" }}>
-              {btnText || t("signStake")}
+            <button onClick={() => onStart({ habit, isCustomHabit, customHabitLabel, customHabitSub, duration, amount, charity })} disabled={isTxDisabled} className={`ui-btn ${isTxDisabled ? "" : "ui-gradient"}`} style={{ flex: 1, padding: "14px", border: "none", borderRadius: 10, background: isTxDisabled ? "var(--line-strong)" : undefined, color: isTxDisabled ? `var(--text-dark)` : "#06060e", fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 700, cursor: isTxDisabled ? "not-allowed" : "pointer", letterSpacing: "0.02em", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              {isTxDisabled ? (<><span className="ui-spinner" /> {btnText || t("signStake")}</>) : (btnText || t("signStake"))}
             </button>
           </div>
         </div>
@@ -505,6 +508,7 @@ function ActiveTab({ comm, processingThis, onCheckin }) {
       <GlassCard hover={false} style={{ padding: 28, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
         <div style={{ fontSize: 11, color: `var(--text-dark)`, letterSpacing: "0.12em" }}>{t("activeCommit")}</div>
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className={!isComplete && !isWaiting && !processingThis ? "ui-pulse" : ""} style={{ position: "absolute", width: 180, height: 180, color: sel?.color || "#34d399" }} />
           <Ring pct={pct} size={180} stroke={12} color={sel?.color || "#34d399"} />
           <div style={{ position: "absolute", textAlign: "center" }}>
             <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, color: `var(--text)`, lineHeight: 1 }}>
@@ -516,17 +520,21 @@ function ActiveTab({ comm, processingThis, onCheckin }) {
 
         {/* Check-in button */}
         {!isComplete && (
-          <button onClick={onCheckin} disabled={btnDisabled} style={{
+          <button onClick={onCheckin} disabled={btnDisabled} className="ui-btn" style={{
             width: 200, padding: "14px 0",
             border: `1px solid ${btnDisabled ? "rgba(255,255,255,0.08)" : (sel?.color || "#34d399") + "80"}`,
             borderRadius: 50, cursor: btnDisabled ? "not-allowed" : "pointer",
             background: btnDisabled ? "rgba(255,255,255,0.03)" : `${sel?.color || "#34d399"}18`,
             color: btnDisabled ? `var(--text-darker)` : sel?.color || "#34d399",
             fontFamily: "'DM Mono', monospace", fontSize: 12, letterSpacing: "0.1em",
-            transition: "all 0.25s",
-            textTransform: "uppercase"
+            textTransform: "uppercase",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}>
-            {processingThis ? t("verifying") : isWaiting ? countdownStr : t("checkinNow")}
+            {processingThis
+              ? (<><span className="ui-spinner" /> {t("verifying")}</>)
+              : isWaiting
+                ? (<><i className="bx bx-time-five" style={{ fontSize: 15 }}></i> {countdownStr}</>)
+                : t("checkinNow")}
           </button>
         )}
 
@@ -552,7 +560,10 @@ function ActiveTab({ comm, processingThis, onCheckin }) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 10, color: `var(--text-darker)`, letterSpacing: "0.1em", marginBottom: 3 }}>NETWORK</div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "'DM Mono', monospace" }}>Base Mainnet</div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "'DM Mono', monospace", display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+            <span className="ui-dot" style={{ color: "#34d399" }} />
+            {comm.chainId === baseSepolia.id ? "Base Sepolia" : "Base Mainnet"}
+          </div>
         </div>
       </GlassCard>
     </div>
@@ -1092,6 +1103,63 @@ export default function App() {
         .mobile-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); }
         @media (max-width: 340px) {
           .mobile-grid-3 { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* ===== uiverse-inspired animations ===== */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.35); }
+          50% { box-shadow: 0 0 22px 4px rgba(52,211,153,0.0); }
+        }
+        @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+        @keyframes gradientShift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
+
+        /* Animated spinner (loader) */
+        .ui-spinner {
+          display: inline-block; width: 14px; height: 14px;
+          border: 2px solid currentColor; border-top-color: transparent;
+          border-radius: 50%; animation: spin 0.7s linear infinite;
+          vertical-align: middle;
+        }
+
+        /* Glowing / lifting button */
+        .ui-btn { position: relative; overflow: hidden; transition: transform .18s cubic-bezier(.4,0,.2,1), box-shadow .25s, filter .2s; }
+        .ui-btn:not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 8px 24px -6px rgba(52,211,153,0.45); }
+        .ui-btn:not(:disabled):active { transform: translateY(0) scale(0.98); }
+        /* sweeping shine across the button on hover */
+        .ui-btn::after {
+          content: ""; position: absolute; top: 0; left: 0; width: 60%; height: 100%;
+          background: linear-gradient(120deg, transparent, rgba(255,255,255,0.35), transparent);
+          transform: translateX(-150%); pointer-events: none;
+        }
+        .ui-btn:not(:disabled):hover::after { animation: shimmer 0.9s ease; }
+
+        /* Flowing gradient for the primary CTA */
+        .ui-gradient {
+          background: linear-gradient(110deg,#34d399,#a78bfa,#34d399);
+          background-size: 200% 100%;
+          animation: gradientShift 3s linear infinite;
+        }
+
+        /* Card sheen on hover */
+        .ui-card { position: relative; overflow: hidden; }
+        .ui-card::before {
+          content: ""; position: absolute; inset: 0;
+          background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%);
+          transform: translateX(-120%); transition: transform .6s ease; pointer-events: none;
+        }
+        .ui-card:hover::before { transform: translateX(120%); }
+
+        /* Pulsing ring around the active commitment */
+        .ui-pulse { border-radius: 50%; animation: pulseGlow 2.4s ease-in-out infinite; }
+
+        /* Network status dot */
+        .ui-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 0 0 currentColor; animation: pulseGlow 2s infinite; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .ui-gradient, .ui-pulse, .ui-dot, .ui-spinner { animation: none !important; }
+          .ui-btn::after, .ui-card::before { display: none; }
         }
 `}</style>
 
