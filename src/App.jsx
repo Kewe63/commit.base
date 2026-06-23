@@ -1064,13 +1064,15 @@ export default function App() {
       const newCheckins = Number(onchainData.checkins);
       const now = Date.now();
 
+      const isFinished = newCheckins >= cDuration;
+
       setCommitmentsList(prev => prev.map(c =>
-        c.id === commitId ? { ...c, checkins: newCheckins, lastCheckinDate: now } : c
+        c.id === commitId ? { ...c, checkins: newCheckins, lastCheckinDate: now, isFinished } : c
       ));
 
       // localStorage güncelle
       const updated = list.map(c =>
-        c.id === commitId ? { ...c, checkins: newCheckins, lastCheckinDate: now } : c
+        c.id === commitId ? { ...c, checkins: newCheckins, lastCheckinDate: now, isFinished } : c
       );
       localStorage.setItem(`commitments_${address}`, JSON.stringify(updated));
 
@@ -1355,40 +1357,49 @@ export default function App() {
             </GlassCard>
           )}
 
-          {screen === "dashboard" && commitmentsList.length === 0 && (
-             <GlassCard hover={false} style={{ padding: 24, textAlign: "center", color: `var(--text-dark)`, fontSize: 12 }}>
-               {t("noActive")}
-             </GlassCard>
-          )}
+          {screen === "dashboard" && (() => {
+            const activeCommitments = commitmentsList.filter(comm => {
+              if (comm.chainId && comm.chainId !== selectedNetwork) return false;
+              const finished = comm.isFinished || (comm.duration > 0 && comm.checkins >= comm.duration);
+              return !finished;
+            });
 
-          {screen === "dashboard" && commitmentsList.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <TabBar tabs={tabs} active={globalTab} onChange={setGlobalTab} />
-            </div>
-          )}
+            return (<>
+              {activeCommitments.length === 0 && (
+                <GlassCard hover={false} style={{ padding: 24, textAlign: "center", color: `var(--text-dark)`, fontSize: 12 }}>
+                  {t("noActive")}
+                </GlassCard>
+              )}
 
-          {screen === "dashboard" && commitmentsList.map((comm) => {
-             const sel = comm.habitId === "custom" ? { id: "custom", icon: "✨", label: comm.customHabit?.label || t("customWrite"), sub: comm.customHabit?.sub || "", color: "#fcd34d" } : getHabits(t).find(h => h.id === comm.habitId);
-             
-             return (
-               <div key={comm.id} style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 40 }}>
-                 {/* Habit pill */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", background: `${sel?.color || "#34d399"}12`, border: `1px solid ${sel?.color || "#34d399"}30`, borderRadius: 50 }}>
-                    <span style={{ fontSize: 16, color: sel?.color || "#34d399" }}>{sel?.icon || "✦"}</span>
-                    <span style={{ fontSize: 13, color: sel?.color || "#34d399", fontFamily: "'Syne', sans-serif", fontWeight: 600 }}>{comm.habitId === "custom" ? (comm.customHabit?.label || t("customWrite")) : (getHabits(t).find(h => h.id === comm.habitId)?.label || comm.habitId)}</span>
-                    <span style={{ fontSize: 11, color: `var(--text-dark)`, marginLeft: 4 }}>{comm.habitId === "custom" ? (comm.customHabit?.sub || "") : (getHabits(t).find(h => h.id === comm.habitId)?.sub || "")}</span>
-                    <div style={{ marginLeft: "auto", fontSize: 10, color: `var(--text-darker)`, fontFamily: "'DM Mono', monospace" }}>
-                      {comm.duration}g · ${comm.amount}
+              {activeCommitments.length > 0 && (
+                <div style={{ marginBottom: 24 }}>
+                  <TabBar tabs={tabs} active={globalTab} onChange={setGlobalTab} />
+                </div>
+              )}
+
+              {activeCommitments.map((comm) => {
+                const sel = comm.habitId === "custom" ? { id: "custom", icon: "✨", label: comm.customHabit?.label || t("customWrite"), sub: comm.customHabit?.sub || "", color: "#fcd34d" } : getHabits(t).find(h => h.id === comm.habitId);
+                return (
+                  <div key={comm.id} style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 40 }}>
+                    {/* Habit pill */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", background: `${sel?.color || "#34d399"}12`, border: `1px solid ${sel?.color || "#34d399"}30`, borderRadius: 50 }}>
+                      <span style={{ fontSize: 16, color: sel?.color || "#34d399" }}>{sel?.icon || "✦"}</span>
+                      <span style={{ fontSize: 13, color: sel?.color || "#34d399", fontFamily: "'Syne', sans-serif", fontWeight: 600 }}>{comm.habitId === "custom" ? (comm.customHabit?.label || t("customWrite")) : (getHabits(t).find(h => h.id === comm.habitId)?.label || comm.habitId)}</span>
+                      <span style={{ fontSize: 11, color: `var(--text-dark)`, marginLeft: 4 }}>{comm.habitId === "custom" ? (comm.customHabit?.sub || "") : (getHabits(t).find(h => h.id === comm.habitId)?.sub || "")}</span>
+                      <div style={{ marginLeft: "auto", fontSize: 10, color: `var(--text-darker)`, fontFamily: "'DM Mono', monospace" }}>
+                        {comm.duration}g · ${comm.amount}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Tab content */}
-                  {globalTab === "active" && <ActiveTab comm={comm} processingThis={isProcessing === comm.id} onCheckin={() => handleCheckin(comm.id, comm.duration)} />}
-                  {globalTab === "calendar" && <CalendarTab comm={comm} />}
-                  {globalTab === "contract" && <ContractTab comm={comm} selectedNetwork={selectedNetwork} networks={networks} onOpenHistory={openHistory} />}
-               </div>
-             )
-          })}
+                    {/* Tab content */}
+                    {globalTab === "active" && <ActiveTab comm={comm} processingThis={isProcessing === comm.id} onCheckin={() => handleCheckin(comm.id, comm.duration)} />}
+                    {globalTab === "calendar" && <CalendarTab comm={comm} />}
+                    {globalTab === "contract" && <ContractTab comm={comm} selectedNetwork={selectedNetwork} networks={networks} onOpenHistory={openHistory} />}
+                  </div>
+                );
+              })}
+            </>);
+          })()}
 
           {showHistoryModal && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
