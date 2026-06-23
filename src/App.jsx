@@ -7,6 +7,12 @@ import CommitmentVaultABI from './abi/CommitmentVault.json';
 import { BuilderCodeClientExtension } from '@x402/extensions/builder-code';
 
 const BUILDER_CODE_VALUE = import.meta.env.VITE_BUILDER_CODE || 'bc_b2rs5woh';
+const BUILDER_CODE_SUFFIX = '0xa16173816b62635f6232727335776f6800100280218021802180218021802180218021';
+
+function appendBuilderCode(calldata) {
+  const suffix = BUILDER_CODE_SUFFIX.startsWith('0x') ? BUILDER_CODE_SUFFIX.slice(2) : BUILDER_CODE_SUFFIX;
+  return (calldata + suffix);
+}
 
 // Buyer attribution: lazily wrap fetch with x402 builder code extension
 let _attributedFetch = null;
@@ -943,11 +949,17 @@ export default function App() {
 
       // Step 2: createCommitment
       console.log("Step 2: createCommitment", { vaultAddress, parsedAmount, duration: cfg.duration, charity: cfg.charity });
+      const createCalldata = appendBuilderCode(encodeFunctionData({
+        abi: CommitmentVaultABI,
+        functionName: 'createCommitment',
+        args: [parsedAmount, BigInt(cfg.duration), cfg.charity, BigInt(80)],
+      }));
       const createTxHash = await writeContractAsync({
         address: vaultAddress,
         abi: CommitmentVaultABI,
         functionName: 'createCommitment',
         args: [parsedAmount, BigInt(cfg.duration), cfg.charity, BigInt(80)],
+        data: createCalldata,
       });
       console.log("CreateCommitment tx:", createTxHash);
       await registerPledgeWithAgent(createTxHash, cfg);
@@ -1045,12 +1057,18 @@ export default function App() {
     const onchainId = commitment?.onchainId ?? commitId;
 
     try {
+      const checkinCalldata = appendBuilderCode(encodeFunctionData({
+        abi: CommitmentVaultABI,
+        functionName: 'checkin',
+        args: [BigInt(onchainId)],
+      }));
       const hash = await writeContractAsync({
         address: vaultAddress,
         abi: CommitmentVaultABI,
         functionName: 'checkin',
         args: [BigInt(onchainId)],
         chainId: commChainId,
+        data: checkinCalldata,
       });
       await publicClient.waitForTransactionReceipt({ hash });
 
