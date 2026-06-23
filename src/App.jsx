@@ -4,6 +4,24 @@ import { injected } from 'wagmi/connectors';
 import { base, baseSepolia } from 'wagmi/chains'
 import { parseUnits, encodeFunctionData } from 'viem';
 import CommitmentVaultABI from './abi/CommitmentVault.json';
+import { BuilderCodeClientExtension } from '@x402/extensions/builder-code';
+
+const BUILDER_CODE_VALUE = import.meta.env.VITE_BUILDER_CODE || 'bc_b2rs5woh';
+
+// Buyer attribution: lazily wrap fetch with x402 builder code extension
+let _attributedFetch = null;
+async function getAttributedFetch() {
+  if (_attributedFetch) return _attributedFetch;
+  try {
+    const { x402Client, wrapFetchWithPayment } = await import('@x402/fetch');
+    const client = new x402Client();
+    client.registerExtension(new BuilderCodeClientExtension(BUILDER_CODE_VALUE));
+    _attributedFetch = wrapFetchWithPayment(fetch, client);
+  } catch {
+    _attributedFetch = fetch;
+  }
+  return _attributedFetch;
+}
 
 const BUILDER_CODE_SUFFIX_HEX = import.meta.env.VITE_BUILDER_CODE_SUFFIX ? (import.meta.env.VITE_BUILDER_CODE_SUFFIX.startsWith("0x") ? import.meta.env.VITE_BUILDER_CODE_SUFFIX : `0x${import.meta.env.VITE_BUILDER_CODE_SUFFIX}`) : "";
 
@@ -827,7 +845,8 @@ export default function App() {
 
   async function checkExistingCommitment(walletAddress) {
     try {
-      const res = await fetch(`${API_URL}/status/${walletAddress}`);
+      const afetch = await getAttributedFetch();
+      const res = await afetch(`${API_URL}/status/${walletAddress}`);
       const data = await res.json();
       if (data.active && data.commitments && data.commitments.length > 0) {
         setCommitmentsList(data.commitments.slice().reverse());

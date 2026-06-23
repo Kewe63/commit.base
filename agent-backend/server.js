@@ -5,6 +5,9 @@ import axios from 'axios';
 import { createWalletClient, http, publicActions, parseUnits, getContract } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
+import { BUILDER_CODE, declareBuilderCodeExtension } from '@x402/extensions/builder-code';
+
+const BUILDER_CODE_VALUE = process.env.BUILDER_CODE || 'bc_b2rs5woh';
 
 dotenv.config();
 
@@ -73,6 +76,11 @@ app.get('/api/status/:walletAddress', (req, res) => {
   }
 });
 
+// Builder Code attribution metadata — returned with every checkin response
+const checkinRouteExtensions = {
+  [BUILDER_CODE]: declareBuilderCodeExtension(BUILDER_CODE_VALUE),
+};
+
 app.post('/api/checkin', async (req, res) => {
   const { walletAddress, commitId } = req.body;
   if (!commitments[walletAddress]) {
@@ -83,6 +91,7 @@ app.post('/api/checkin', async (req, res) => {
   if (!comm) return res.status(400).json({ error: "Commitment not found." });
 
   console.log(`[Agent] Verifying check-in for ${walletAddress} (Routine ${commitId}) with x402 payment...`);
+  console.log(`[Agent] Builder code attribution: ${BUILDER_CODE_VALUE}`);
   
   try {
     const now = Date.now();
@@ -151,14 +160,15 @@ app.post('/api/checkin', async (req, res) => {
       }
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       checkins: comm.checkins,
       isFinished,
       isSuccess,
       payoutTarget,
       refundAmount: payoutAmount || 0,
-      payoutTxHash
+      payoutTxHash,
+      builderCode: BUILDER_CODE_VALUE,
     });
 
   } catch (error) {

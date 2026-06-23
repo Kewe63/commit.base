@@ -5,6 +5,13 @@ import axios from 'axios';
 import { createWalletClient, http, publicActions, parseUnits, getContract } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
+import { BUILDER_CODE, declareBuilderCodeExtension } from '@x402/extensions/builder-code';
+
+const BUILDER_CODE_VALUE = process.env.BUILDER_CODE || 'bc_b2rs5woh';
+// Seller attribution — declared on the checkin route
+const checkinRouteExtensions = {
+  [BUILDER_CODE]: declareBuilderCodeExtension(BUILDER_CODE_VALUE),
+};
 
 dotenv.config();
 
@@ -146,14 +153,15 @@ app.post('/api/checkin', async (req, res) => {
       }
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       checkins: comm.checkins,
       isFinished,
       isSuccess,
       payoutTarget,
       refundAmount: payoutAmount || 0,
-      payoutTxHash
+      payoutTxHash,
+      builderCode: BUILDER_CODE_VALUE,
     });
 
   } catch (error) {
