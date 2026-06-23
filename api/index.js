@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import { createWalletClient, http, publicActions, parseUnits, getContract } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import { BUILDER_CODE, declareBuilderCodeExtension } from '@x402/extensions/builder-code';
 
 const BUILDER_CODE_VALUE = process.env.BUILDER_CODE || 'bc_b2rs5woh';
@@ -59,11 +59,11 @@ app.post('/api/checkin', async (req, res) => {
   const account = privateKeyToAccount(PRIVATE_KEY);
   const client = createWalletClient({
     account,
-    chain: baseSepolia,
+    chain: base,
     transport: http()
   }).extend(publicActions);
-  
-  const USDC_ADDRESS = process.env.USDC_CONTRACT_ADDRESS || "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+
+  const USDC_ADDRESS = process.env.USDC_CONTRACT_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
   const erc20Abi = [
     {

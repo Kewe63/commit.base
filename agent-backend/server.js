@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import { createWalletClient, http, publicActions, parseUnits, getContract } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import { BUILDER_CODE, declareBuilderCodeExtension } from '@x402/extensions/builder-code';
 
 const BUILDER_CODE_VALUE = process.env.BUILDER_CODE || 'bc_b2rs5woh';
@@ -24,11 +24,11 @@ if (!PRIVATE_KEY) throw new Error("PRIVATE_KEY missing in .env");
 const account = privateKeyToAccount(PRIVATE_KEY);
 const client = createWalletClient({
   account,
-  chain: baseSepolia,
+  chain: base,
   transport: http()
 }).extend(publicActions);
 
-const USDC_ADDRESS = process.env.USDC_CONTRACT_ADDRESS || "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+const USDC_ADDRESS = process.env.USDC_CONTRACT_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
 // ERC-20 Minimal ABI for Transfers
 const erc20Abi = [
@@ -44,7 +44,7 @@ const erc20Abi = [
 ];
 
 console.log(`[Agent] Wallet initialized. Address: ${account.address}`);
-console.log(`[Agent] Operating on network: Base Sepolia`);
+console.log(`[Agent] Operating on network: Base Mainnet`);
 
 // Mock Agent state mapping users to their commitments (In production, use DB)
 const commitments = {};
