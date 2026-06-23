@@ -6,7 +6,7 @@ import { parseUnits, encodeFunctionData } from 'viem';
 import CommitmentVaultABI from './abi/CommitmentVault.json';
 import { BuilderCodeClientExtension } from '@x402/extensions/builder-code';
 
-const BUILDER_CODE_VALUE = import.meta.env.VITE_BUILDER_CODE || 'bc_b2rs5woh';
+const BUILDER_CODE_VALUE = import.meta.env.VITE_BUILDER_CODE || 'bc_uzb9vqpt';
 
 // Buyer attribution: lazily wrap fetch with x402 builder code extension
 let _attributedFetch = null;

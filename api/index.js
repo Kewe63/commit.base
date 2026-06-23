@@ -7,7 +7,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
 import { BUILDER_CODE, declareBuilderCodeExtension } from '@x402/extensions/builder-code';
 
-const BUILDER_CODE_VALUE = process.env.BUILDER_CODE || 'bc_b2rs5woh';
+const BUILDER_CODE_VALUE = process.env.BUILDER_CODE || 'bc_uzb9vqpt';
 // Seller attribution — declared on the checkin route
 const checkinRouteExtensions = {
   [BUILDER_CODE]: declareBuilderCodeExtension(BUILDER_CODE_VALUE),
