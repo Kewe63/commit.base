@@ -1,47 +1,13 @@
-import React, { useEffect } from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
-import ErrorBoundary from './ErrorBoundary.jsx'
-
-import { WagmiProvider, createConfig, http } from 'wagmi'
-import { base, baseSepolia } from 'wagmi/chains'
-import { injected, coinbaseWallet } from 'wagmi/connectors'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { sdk } from '@farcaster/miniapp-sdk'
-
-const config = createConfig({
-  chains: [base, baseSepolia],
-  connectors: [
-    injected(),
-    coinbaseWallet({ appName: 'commit.base', preference: 'smartWalletOnly' }),
-  ],
-  transports: {
-    [base.id]: http(),
-    [baseSepolia.id]: http(),
-  },
-})
-
-const queryClient = new QueryClient()
-
-function Root() {
-  useEffect(() => {
-    // Notify Farcaster client that the app is fully loaded
-    sdk.actions.ready()
-  }, [])
-
-    return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </QueryClientProvider>
-    </WagmiProvider>
-  )
-}
-
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { WagmiProvider } from 'wagmi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { config } from './config';
+import App from './App';
+import ErrorBoundary from './ErrorBoundary';
+import MiniAppReady from './components/MiniAppReady';
+import './index.css';
+const queryClient = new QueryClient();
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <Root />
-  </React.StrictMode>,
-)
+  <React.StrictMode><WagmiProvider config={config}><QueryClientProvider client={queryClient}><ErrorBoundary><App /><MiniAppReady /></ErrorBoundary></QueryClientProvider></WagmiProvider></React.StrictMode>,
+);

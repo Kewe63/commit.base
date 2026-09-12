@@ -1,0 +1,16 @@
+{
+  "chainId": 84532,
+  "address": "0x37e873517C6204cbf1aC8C9B245130E43e045C5D",
+  "deployer": "0x70E77355dC5116134B1C126046342f5C90Fb2542",
+  "transactionHash": "0x104bb5796a946a2725bc0c5f7de347b5fb4ddf42cd8350ac8d2e290b922f7a19",
+  "deploymentBlock": 46720384,
+  "status": 1,
+  "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  "requiredThreshold": "80",
+  "maxDurationDays": "365",
+  "runtimeBytecodeHash": "0xd09551890de1b5d398b5592cf5b02f9a93674459d18a248268408c28fad017b7",
+  "runtimeMatchesLocalArtifact": true,
+  "immutableTokenVerified": true,
+  "gasUsed": "997413",
+  "explorerVerified": false
+}

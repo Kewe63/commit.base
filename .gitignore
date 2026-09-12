@@ -11,8 +11,13 @@ node_modules
 dist
 dist-ssr
 *.local
-agent-backend/.env
-contracts/.env
+# Secrets at any package level; examples are intentionally public.
+.env
+.env.*
+!.env.example
+# Reviewed public testnet defaults; never store secrets in this file.
+!/.env.production
+coverage
 
 # Hardhat build output
 contracts/artifacts

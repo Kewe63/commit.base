@@ -1,28 +1,24 @@
-import React from 'react'
+import React from 'react';
 
 export default class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+  state = { hasError: false };
 
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
 
   componentDidCatch(error, info) {
-    console.error("Uncaught error:", error, info);
+    console.error('Application error:', error, info);
   }
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div style={{ padding: 24, color: '#fff', background: '#0b1020', minHeight: '100vh' }}>
-          <h2 style={{ color: '#ff6b6b' }}>Uygulama bir hata ile karşılaştı.</h2>
-          <p style={{ color: '#ddd' }}>{this.state.error?.message || 'Bilinmeyen hata'}</p>
-          <p style={{ color: '#bbb' }}>Lütfen sayfayı yenileyin veya geliştirici konsolunu kontrol edin.</p>
-        </div>
-      )
+      const tr = document.documentElement.lang === 'tr';
+      return <main style={{ padding: 32, background: '#0b1020', color: '#f4f4fa', minHeight: '100vh' }}>
+        <h1>{tr ? 'Uygulama görüntülenemedi.' : 'The application could not be displayed.'}</h1>
+        <p role="alert">{tr ? 'Sayfayı yenileyebilirsin. Önceden gönderilmiş bir işlem varsa tekrar imzalamadan önce cüzdanından veya gezginden durumunu kontrol et.' : 'You can reload the page. If you already submitted a transaction, check its status in your wallet or explorer before signing again.'}</p>
+        <button type="button" onClick={() => window.location.reload()}>{tr ? 'Sayfayı yenile' : 'Reload page'}</button>
+      </main>;
     }
     return this.props.children;
   }
